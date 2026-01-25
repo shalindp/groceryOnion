@@ -1,6 +1,8 @@
 using Application.Products.Actions;
-using GroceryOnion.Mappers;
+using Application.Services;
+using Presentation.Mappers;
 using Microsoft.OpenApi;
+using Persistence.Settings;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,6 +21,7 @@ builder.Services.AddSwaggerGen(options =>
 // builder.Services.AddOpenApi();
 
 // Register application services
+PersistenceModule.AddToService(builder.Services);
 
 builder.Services.AddHttpClient<IHttpHelper, HttpHelper>(client =>
 {
@@ -31,6 +34,9 @@ builder.Services.AddHttpClient<IHttpHelper, HttpHelper>(client =>
 builder.Services.AddTransient<IPaknSaveProductAction, PaknSaveProductAction>();
 builder.Services.AddTransient<IWoolworthsProductAction, WoolworthsProductAction>();
 builder.Services.AddSingleton<IProductMapper, ProductMapper>();
+
+builder.Services.AddHostedService<ProductSyncBackgroundService>();
+builder.Services.AddScoped<ProductSyncJob>();
 
 var app = builder.Build();
 

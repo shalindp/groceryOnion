@@ -1,4 +1,4 @@
-namespace GroceryOnion;
+namespace Presentation;
 
 public class WeatherForecast
 {

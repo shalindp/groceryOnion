@@ -1,6 +1,6 @@
 using Riok.Mapperly.Abstractions;
 
-namespace GroceryOnion.Mappers;
+namespace Presentation.Mappers;
 
 public interface IProductMapper
 {

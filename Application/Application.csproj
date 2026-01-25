@@ -10,4 +10,14 @@
       <PackageReference Include="PuppeteerSharp" Version="20.2.5" />
     </ItemGroup>
 
+    <ItemGroup>
+      <Reference Include="Microsoft.Extensions.Hosting.Abstractions">
+        <HintPath>C:\Users\shali\.dotnet\shared\Microsoft.AspNetCore.App\9.0.12\Microsoft.Extensions.Hosting.Abstractions.dll</HintPath>
+      </Reference>
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Persistence\Persistence.csproj" />
+    </ItemGroup>
+
 </Project>

@@ -1,26 +1,32 @@
-using System.Text;
+﻿using Application.Products.Actions;
+using Persistence;
 using PuppeteerSharp;
 
-namespace HeadlessScrapper.Woolworths;
+namespace Application.Services;
 
-public class WoolworthsProductCrawler
+public sealed class ProductSyncJob
 {
-    public static readonly string WoolworthsUrl = "https://www.woolworths.co.nz";
+    private const string WoolworthsUrl = "https://www.woolworths.co.nz";
 
-    private readonly IList<string> _regionsVisited = new List<string>();
-    private readonly IList<string> _categoriesVisited = new List<string>();
+    private readonly IHttpHelper _httpClientHelper;
+    private readonly INpgsqlDbContext _dbContext;
+    private readonly IWoolworthsProductAction _woolworthsProductAction;
+
     private IPage _page;
-
-    private readonly IList<string> _categoryBlacklist = new List<string>
-    {
-        "back-to-school"
-    };
-
+    private readonly IList<string> _regionsVisited = new List<string>();
     private readonly Dictionary<string, Cookie> _regionCookies = new();
 
-    public record Cookie(string Session, string Aga);
+    private record Cookie(string Session, string Aga);
 
-    public async Task Start()
+    public ProductSyncJob(IHttpHelper httpClientHelper, INpgsqlDbContext dbContext,
+        IWoolworthsProductAction woolworthsProductAction)
+    {
+        _httpClientHelper = httpClientHelper;
+        _dbContext = dbContext;
+        _woolworthsProductAction = woolworthsProductAction;
+    }
+
+    public async Task RunAsync(CancellationToken token)
     {
         var browserFetcher = new BrowserFetcher();
         await browserFetcher.DownloadAsync();
@@ -38,9 +44,9 @@ public class WoolworthsProductCrawler
             "Chrome/120.0.0.0 Safari/537.36"
         );
 
-        _page = page;
 
         await page.GoToAsync(WoolworthsUrl);
+        _page = page;
         await GoToNextRegion();
     }
 
@@ -118,11 +124,22 @@ public class WoolworthsProductCrawler
         }
 
         var xx = d.FirstOrDefault(c => !_regionsVisited.Contains(c.Key));
-        if (xx.Key == null)
+        if (xx.Key == null || xx.Key.Equals("Woolworths Amberley"))
         {
             Console.WriteLine("All regions visited.");
-            // write all region cookies to csv
-            await WriteRegionCookiesToCsvAsync();
+                foreach (var regionCookie in _regionCookies)
+                {
+                    var products = await _woolworthsProductAction.Search("milk", regionCookie.Value.Session,
+                        regionCookie.Value.Aga);
+
+                    var x = products.Select(c => new QueriesSql.CreateProductsArgs()
+                    {
+                        Name = c.Name,
+                        Brand = ""
+                    }).ToList();
+
+                    await _dbContext.Queries.CreateProducts(x);
+                }
         }
         else
         {
@@ -137,105 +154,8 @@ public class WoolworthsProductCrawler
                               agaCookie.Value);
             await _page.DeleteCookieAsync(await _page.GetCookiesAsync());
 
-            // await browser.CloseAsync();
             await _page.GoBackAsync();
-            Thread.Sleep(500);
-
             await GoToNextRegion();
         }
-    }
-    //
-    // private async Task<IElementHandle> GetBrowseHandle()
-    // {
-    //     var browseHandle = await _page.WaitForXPathAsync(
-    //         "//nav//span[contains(text(), 'Browse')]"
-    //     );
-    //     if (browseHandle == null)
-    //     {
-    //         throw new Exception("Browse link not found.");
-    //     }
-    //
-    //     return browseHandle;
-    // }
-    //
-    // private async Task<IElementHandle[]> GetCategoryMenu()
-    // {
-    //     var browseHandle = await GetBrowseHandle();
-    //     await browseHandle.ClickAsync();
-    //
-    //     var sideMenuHandle = await _page.WaitForSelectorAsync("global-nav-browse-menu-items");
-    //     if (sideMenuHandle == null)
-    //     {
-    //         throw new Exception("Side menu not found.");
-    //     }
-    //
-    //     var sideMenuItemsHandles = await sideMenuHandle.QuerySelectorAllAsync("li");
-    //     if (!sideMenuItemsHandles.Any())
-    //     {
-    //         throw new Exception("Side menu items not found.");
-    //     }
-    //
-    //     return sideMenuItemsHandles;
-    // }
-    //
-    // private async Task CategoryLoop()
-    // {
-    //     var sideMenuItemsHandles = await GetCategoryMenu();
-    //     foreach (var sideMenuItemsHandle in sideMenuItemsHandles)
-    //     {
-    //         var linkHandle = await sideMenuItemsHandle.QuerySelectorAsync("a");
-    //         if (linkHandle == null)
-    //         {
-    //             throw new Exception("Side menu link not found.");
-    //         }
-    //
-    //         var href = await linkHandle.EvaluateFunctionAsync<string>(
-    //             "el => el.getAttribute('href')"
-    //         );
-    //
-    //         if (string.IsNullOrEmpty(href))
-    //         {
-    //             throw new Exception("Side menu link href not found.");
-    //         }
-    //
-    //         if (_categoryBlacklist.Any(b => href.Contains(b)) ||
-    //             _categoriesVisited.Contains(href))
-    //         {
-    //             continue;
-    //         }
-    //
-    //         Console.WriteLine("Visiting category: " + href);
-    //         await _page.GoToAsync("https://www.woolworths.co.nz" + href);
-    //
-    //         // Thread.Sleep(1000);
-    //         var x = await GetBrowseHandle();
-    //         await x.ClickAsync();
-    //         // Thread.Sleep(50000);
-    //     }
-    // }
-
-    private async Task WriteRegionCookiesToCsvAsync()
-    {
-        var sb = new StringBuilder();
-        sb.AppendLine("Region,ASP.NET_SessionId,aga");
-
-        foreach (var kv in _regionCookies)
-        {
-            var region = EscapeCsv(kv.Key);
-            var session = EscapeCsv(kv.Value?.Session);
-            var aga = EscapeCsv(kv.Value?.Aga);
-            sb.AppendLine($"{region},{session},{aga}");
-        }
-
-        var path = Path.Combine(Directory.GetCurrentDirectory(), "woolworths_region_cookies.csv");
-        await File.WriteAllTextAsync(path, sb.ToString(), Encoding.UTF8);
-        Console.WriteLine($"Wrote {_regionCookies.Count} region cookies to {path}");
-    }
-
-    private static string EscapeCsv(string? value)
-    {
-        if (string.IsNullOrEmpty(value))
-            return "\"\"";
-        return "\"" + value.Replace("\"", "\"\"") + "\"";
     }
 }

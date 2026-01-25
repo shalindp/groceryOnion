@@ -34,7 +34,7 @@ public class WoolworthsProductAction : IWoolworthsProductAction
 
     private record WoolworthsContext(WoolworthsFulfillment Fulfilment);
 
-    public async Task<IList<Product>> Search(string term)
+    public async Task<IList<Product>> Search(string term, string sessionId, string aga)
     {
         const string woolworthsUrl =
             "https://www.woolworths.co.nz/api/v1/products?target=search&search={term}&inStockProductsOnly=false&size=120&page=";
@@ -49,8 +49,8 @@ public class WoolworthsProductAction : IWoolworthsProductAction
         
         var cookies = new Dictionary<string, string>
         {
-            { "aga", "766707b394872b181f1414b0000342ea" },
-            { "ASP.NET_SessionId", "ji0deyhli4drn1t5auqjduk3" }
+            { "aga", aga },
+            { "ASP.NET_SessionId", sessionId }
         };
 
         var products = new List<Product>();

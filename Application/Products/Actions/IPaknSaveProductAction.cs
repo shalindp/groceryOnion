@@ -38,4 +38,9 @@ public class PaknSaveProductAction : IPaknSaveProductAction
     private record PaknSaveFingerPrintResponse(string access_token);
 
     private record PaknSaveFingerPrintRequest(string FingerprintUser, string FingerprintGuest);
+
+    public Task<IList<Product>> Search(string term, string sessionId, string aga)
+    {
+        throw new NotImplementedException();
+    }
 }

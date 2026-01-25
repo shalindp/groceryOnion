@@ -2,7 +2,7 @@ using Application.Models.Products;
 using Application.Products.Actions;
 using Microsoft.AspNetCore.Mvc;
 
-namespace GroceryOnion.Controllers;
+namespace Presentation.Controllers;
 
 [ApiController]
 [Route("[controller]")]
@@ -21,9 +21,11 @@ public class ProductController : ControllerBase
     [HttpGet(Name = nameof(Search))]
     public async Task<IEnumerable<Product>> Search([FromQuery(Name = "term")] string term)
     {
-        IList<Product> products = new List<Product>();
+        // IList<Product> products = new List<Product>();
 
-        var p = await _woolworthsProductAction.Search(term);
-        return await _paknSaveProductAction.Search(term);
+        // var p = await _woolworthsProductAction.Search(term);
+        // return p;
+        // return await _paknSaveProductAction.Search(term);
+        return [];
     }
 }

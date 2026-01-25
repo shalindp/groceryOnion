@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 
-namespace GroceryOnion.Controllers;
+namespace Presentation.Controllers;
 
 [ApiController]
 [Route("[controller]")]
