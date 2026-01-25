@@ -1,0 +1,6 @@
+@GroceryOnion_HostAddress = http://localhost:5112
+
+GET {{GroceryOnion_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
