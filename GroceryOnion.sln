@@ -4,8 +4,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Presentation", "Presentatio
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Application", "Application\Application.csproj", "{A5EE0F36-6D7C-4B72-8A30-D48953006821}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HeadlessScrapper", "HeadlessScrapper\HeadlessScrapper.csproj", "{0F961AF1-4084-4005-8F8B-F405F3F62E49}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Persistence", "Persistence\Persistence.csproj", "{FA39BA2C-0C97-4966-A5D5-4DAFE4E89A31}"
 EndProject
 Global
@@ -22,10 +20,6 @@ Global
 		{A5EE0F36-6D7C-4B72-8A30-D48953006821}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A5EE0F36-6D7C-4B72-8A30-D48953006821}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A5EE0F36-6D7C-4B72-8A30-D48953006821}.Release|Any CPU.Build.0 = Release|Any CPU
-		{0F961AF1-4084-4005-8F8B-F405F3F62E49}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{0F961AF1-4084-4005-8F8B-F405F3F62E49}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{0F961AF1-4084-4005-8F8B-F405F3F62E49}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{0F961AF1-4084-4005-8F8B-F405F3F62E49}.Release|Any CPU.Build.0 = Release|Any CPU
 		{FA39BA2C-0C97-4966-A5D5-4DAFE4E89A31}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{FA39BA2C-0C97-4966-A5D5-4DAFE4E89A31}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{FA39BA2C-0C97-4966-A5D5-4DAFE4E89A31}.Release|Any CPU.ActiveCfg = Release|Any CPU

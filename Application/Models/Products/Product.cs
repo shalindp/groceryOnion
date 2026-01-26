@@ -1,4 +1,4 @@
-using Application.Enums.Products;
+using Application.Enums;
 
 namespace Application.Models.Products;
 

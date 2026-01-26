@@ -1,4 +1,4 @@
-namespace Application.Enums.Products;
+namespace Application.Enums;
 
 public enum StoreType
 {
