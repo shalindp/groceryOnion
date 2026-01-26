@@ -32,11 +32,12 @@ builder.Services.AddHttpClient<IHttpHelper, HttpHelper>(client =>
 
 
 builder.Services.AddTransient<IPaknSaveProductAction, PaknSaveProductAction>();
+builder.Services.AddTransient<IWoolworthsRegionAction, WoolworthsRegionAction>();
 builder.Services.AddTransient<IWoolworthsProductAction, WoolworthsProductAction>();
 builder.Services.AddSingleton<IProductMapper, ProductMapper>();
 
-builder.Services.AddHostedService<ProductSyncBackgroundService>();
-builder.Services.AddScoped<ProductSyncJob>();
+// builder.Services.AddHostedService<ProductSyncBackgroundService>();
+// builder.Services.AddScoped<ProductSyncJob>();
 
 var app = builder.Build();
 

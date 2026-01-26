@@ -1,6 +1,6 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
-
+drop  table if exists Product;
 create table Product
 (
     id               UUID PRIMARY KEY      DEFAULT uuid_generate_v4(),

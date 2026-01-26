@@ -20,7 +20,7 @@ public class PaknSaveProductAction : IPaknSaveProductAction
     {
         const string url = "https://www.paknsave.co.nz/api/user/get-current-user";
         var response = await _httpHelper.PostAsync<PaknSaveFingerPrintResponse>(url);
-        var accessToken = response?.access_token;
+        // var accessToken = response?.access_token;
         
         
 

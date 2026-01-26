@@ -1,4 +1,5 @@
-﻿using Application.Products.Actions;
+﻿using System.Text;
+using Application.Products.Actions;
 using Persistence;
 using PuppeteerSharp;
 
@@ -7,6 +8,10 @@ namespace Application.Services;
 public sealed class ProductSyncJob
 {
     private const string WoolworthsUrl = "https://www.woolworths.co.nz";
+
+    private readonly IList<string> Categories = new List<string>
+    {
+    };
 
     private readonly IHttpHelper _httpClientHelper;
     private readonly INpgsqlDbContext _dbContext;
@@ -28,12 +33,15 @@ public sealed class ProductSyncJob
 
     public async Task RunAsync(CancellationToken token)
     {
+
+await        _woolworthsProductAction.GetAllProductsAsync("", "", "");
+
         var browserFetcher = new BrowserFetcher();
         await browserFetcher.DownloadAsync();
 
         using var browser = await Puppeteer.LaunchAsync(new LaunchOptions
         {
-            Headless = true,
+            Headless = false,
             // HeadlessMode = HeadlessMode.True
         });
 
@@ -52,7 +60,7 @@ public sealed class ProductSyncJob
 
     private async Task GoToNextRegion()
     {
-        Thread.Sleep(600);
+        Thread.Sleep(300);
         // Click on the pickup or delivery link
         var pickupOrDeliveryHandle = await _page.WaitForSelectorAsync("a[href='//bookatimeslot']");
         if (pickupOrDeliveryHandle == null)
@@ -124,38 +132,71 @@ public sealed class ProductSyncJob
         }
 
         var xx = d.FirstOrDefault(c => !_regionsVisited.Contains(c.Key));
-        if (xx.Key == null || xx.Key.Equals("Woolworths Amberley"))
+        if (xx.Key == null
+            // || xx.Key.Equals("Woolworths Amberley")
+            )
         {
             Console.WriteLine("All regions visited.");
-                foreach (var regionCookie in _regionCookies)
-                {
-                    var products = await _woolworthsProductAction.Search("milk", regionCookie.Value.Session,
-                        regionCookie.Value.Aga);
-
-                    var x = products.Select(c => new QueriesSql.CreateProductsArgs()
-                    {
-                        Name = c.Name,
-                        Brand = ""
-                    }).ToList();
-
-                    await _dbContext.Queries.CreateProducts(x);
-                }
+            await WriteRegionsToCsvAsync("VisitedRegions.csv");
+            foreach (var regionCookie in _regionCookies)
+            {
+                // var products = await _woolworthsProductAction.GetAllProductsAsync(
+                //     regionCookie.Key,
+                //     regionCookie.Value.Session,
+                //     regionCookie.Value.Aga);
+                //
+                // var x = products.Select(c => new QueriesSql.CreateProductsArgs()
+                // {
+                //     Name = c.Name,
+                //     Brand = ""
+                // }).ToList();
+                //
+                // await _dbContext.Queries.CreateProducts(x);
+            }
         }
         else
         {
             await xx.Value.ClickAsync();
             _regionsVisited.Add(xx.Key);
-            var cookies = await _page.GetCookiesAsync(WoolworthsUrl);
-            var sessionCookie = cookies.FirstOrDefault(c => c.Name == "ASP.NET_SessionId");
-            var agaCookie = cookies.FirstOrDefault(c => c.Name == "aga");
+            // var cookies = await _page.GetCookiesAsync(WoolworthsUrl);
+            // var sessionCookie = cookies.FirstOrDefault(c => c.Name == "ASP.NET_SessionId");
+            // var agaCookie = cookies.FirstOrDefault(c => c.Name == "aga");
 
-            _regionCookies[xx.Key] = new Cookie(sessionCookie.Value, agaCookie.Value);
-            Console.WriteLine("Selected region: " + xx.Key + " | Session: " + sessionCookie.Value + " | Aga: " +
-                              agaCookie.Value);
-            await _page.DeleteCookieAsync(await _page.GetCookiesAsync());
+            _regionCookies[xx.Key] = new Cookie("","");
+            Console.WriteLine("Visiting region: " + xx.Key);
+            // Console.WriteLine("Selected region: " + xx.Key + " | Session: " + sessionCookie.Value + " | Aga: " +
+                              // agaCookie.Value);
+            // await _page.DeleteCookieAsync(await _page.GetCookiesAsync());
 
             await _page.GoBackAsync();
+            Thread.Sleep(300);
             await GoToNextRegion();
         }
+    }
+    
+    public async Task WriteRegionsToCsvAsync(string filePath)
+    {
+        var sb = new StringBuilder();
+        // Header
+        sb.AppendLine("Region");
+
+        foreach (var kvp in _regionCookies)
+        {
+            var region = kvp.Key;
+            var session = kvp.Value.Session;
+            var aga = kvp.Value.Aga;
+
+            // Escape commas just in case
+            region = region.Replace(",", " ");
+            // session = session.Replace(",", " ");
+            // aga = aga.Replace(",", " ");
+
+            sb.AppendLine($"{region}");
+        }
+
+        // Write to file asynchronously
+        await File.WriteAllTextAsync(filePath, sb.ToString(), Encoding.UTF8);
+
+        Console.WriteLine($"Regions written to CSV: {filePath}");
     }
 }
