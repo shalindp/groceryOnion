@@ -5,10 +5,12 @@ namespace Application.Actions.Region;
 
 public interface IWoolworthsRegionAction
 {
-    public Task<Result<WoolworthsChangeRegionResult?>> CreateSessionWithRegionAsync(int addressId);
+    public Task<Result<WoolworthsChangeRegionResult>> CreateSessionWithRegionAsync(int addressId);
+    public Task<Result<IList<WoolworthsGetRegionsResult>>> GetRegionsAsync();
 }
 
 public record WoolworthsGetRegionsResult(int Id, string StoreName);
+
 public record WoolworthsChangeRegionResult(string Address, string SessionId, string Aga);
 
 public class WoolworthsRegionAction : IWoolworthsRegionAction
@@ -19,34 +21,36 @@ public class WoolworthsRegionAction : IWoolworthsRegionAction
     {
         _httpHelper = httpHelper;
     }
-    
-    public async Task<Result<IList<WoolworthsGetRegionsResult>?>> GetRegionsAsync()
+
+    public async Task<Result<IList<WoolworthsGetRegionsResult>>> GetRegionsAsync()
     {
         const string url = "https://www.woolworths.co.nz/api/v1/addresses/pickup-addresses";
         try
         {
-            var result = await _httpHelper.GetAsync<RegionsResponse?>(url)!;
+            var result = await _httpHelper.GetAsync<RegionsResponse?>(url, headers: Headers.WoolworthsDefaultHeaders,
+                freshSession: true)!;
             var woolworthsGetRegionsResults = result!
-                .Body!.StoreAreas.Select(c=> new WoolworthsGetRegionsResult(c.Id, c.Name)).ToList();
-            
+                .Body!.StoreAreas.SelectMany(c => c.StoreAddresses)
+                .Select(c => new WoolworthsGetRegionsResult(c.Id, c.Name))
+                .ToList();
+
             return Result<IList<WoolworthsGetRegionsResult>>.Success(woolworthsGetRegionsResults);
         }
         catch (Exception ex)
         {
-            return Result<WoolworthsGetRegionsResult>.Failure($"Error fetching regions: {ex.Message}");
+            return Result<IList<WoolworthsGetRegionsResult>>.Failure($"Error fetching regions: {ex.Message}");
         }
-        
-        return Result<WoolworthsGetRegionsResult>.Failure();
-
     }
-    
+
     private record RegionsResponse(StoreAreasResponse[] StoreAreas);
 
-    private record StoreAreasResponse(int Id, string Name);
+    private record StoreAreasResponse(int Id, string Name, StoreAddressesResponse[] StoreAddresses);
+
+    private record StoreAddressesResponse(int Id, string Name);
 
     public async Task<Result<WoolworthsChangeRegionResult>> CreateSessionWithRegionAsync(int addressId)
     {
-        const string url = "https://www.woolworths.co.nz/api/v1/fulfilment/my/pickup-addresses";
+        var url = "https://www.woolworths.co.nz/api/v1/fulfilment/my/pickup-addresses?ts=" + DateTime.UtcNow.Ticks;
         var body = new
         {
             addressId
@@ -54,10 +58,17 @@ public class WoolworthsRegionAction : IWoolworthsRegionAction
 
         try
         {
-            var result = await _httpHelper.PutAsync<ChangeRegionResponse>(url, body)!;
-            var sessionId =_httpHelper.GetCookie(url, result!.Headers, Cookies.AspNetSessionIdCookieName);
+            var headers = new Dictionary<string, string>
+            {
+                { "Accept", "application/json" },
+                { "User-Agent", "api-client/1.0" },
+                { "x-requested-with", "OnlineShopping.WebApp" }
+            };
+
+            var result = await _httpHelper.PutAsync<ChangeRegionResponse>(url, body, headers: headers)!;
+            var sessionId = _httpHelper.GetCookie(url, result!.Headers, Cookies.AspNetSessionIdCookieName);
             var aga = _httpHelper.GetCookie(url, result!.Headers, Cookies.Aga);
-            
+
             return Result<WoolworthsChangeRegionResult>.Success(new WoolworthsChangeRegionResult(
                 result.Body!.Context.Fulfilment.Address,
                 sessionId!,
@@ -70,7 +81,7 @@ public class WoolworthsRegionAction : IWoolworthsRegionAction
         }
     }
 
-    
+
     private record ChangeRegionResponse(ChangeRegionContextResponse Context);
 
     private record ChangeRegionContextResponse(ChangeRegionFulfillmentResponse Fulfilment);

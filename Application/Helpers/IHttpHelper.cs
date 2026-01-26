@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+
 public class HttpResponseWrapper<T>
 {
     public T? Body { get; set; }
@@ -14,74 +15,78 @@ public interface IHttpHelper
     Task<HttpResponseWrapper<TResponse>?> GetAsync<TResponse>(
         string url,
         IDictionary<string, string>? headers = null,
-        IDictionary<string, string>? cookies = null);
+        bool freshSession = false);
 
     Task<HttpResponseWrapper<TResponse>?> PostAsync<TResponse>(
         string url,
         object? payload = null,
         IDictionary<string, string>? headers = null,
-        IDictionary<string, string>? cookies = null);
+        bool freshSession = false);
 
     Task<HttpResponseWrapper<TResponse>?> PutAsync<TResponse>(
         string url,
         object? payload = null,
         IDictionary<string, string>? headers = null,
-        IDictionary<string, string>? cookies = null);
+        bool freshSession = false);
 
     Task<HttpResponseWrapper<TResponse>?> DeleteAsync<TResponse>(
         string url,
         IDictionary<string, string>? headers = null,
-        IDictionary<string, string>? cookies = null);
-    
-    public string? GetCookie(string url, HttpResponseHeaders headers, string cookieName);
+        bool freshSession = false);
+
+    string? GetCookie(string url, HttpResponseHeaders headers, string cookieName);
 }
 
 public class HttpHelper : IHttpHelper
 {
-    private readonly HttpClient _httpClient;
-
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = true
     };
 
-    public HttpHelper(HttpClient httpClient)
+    // Default HttpClient reused for normal requests
+    private readonly HttpClient _defaultClient;
+
+    public HttpHelper()
     {
-        _httpClient = httpClient;
+        _defaultClient = new HttpClient()
+        {
+            Timeout = TimeSpan.FromSeconds(30)
+        };
     }
 
     public Task<HttpResponseWrapper<TResponse>?> GetAsync<TResponse>(
         string url,
         IDictionary<string, string>? headers = null,
-        IDictionary<string, string>? cookies = null)
+        bool freshSession = false)
     {
-        return SendAsync<TResponse>(HttpMethod.Get, url, null, headers, cookies);
+        return SendAsync<TResponse>(HttpMethod.Get, url, null, headers, freshSession);
     }
 
     public Task<HttpResponseWrapper<TResponse>?> PostAsync<TResponse>(
         string url,
         object? payload = null,
         IDictionary<string, string>? headers = null,
-        IDictionary<string, string>? cookies = null)
+        bool freshSession = false)
     {
-        return SendAsync<TResponse>(HttpMethod.Post, url, payload, headers, cookies);
+        return SendAsync<TResponse>(HttpMethod.Post, url, payload, headers, freshSession);
     }
 
     public Task<HttpResponseWrapper<TResponse>?> PutAsync<TResponse>(
         string url,
         object? payload = null,
         IDictionary<string, string>? headers = null,
-        IDictionary<string, string>? cookies = null)
+        bool freshSession = false)
     {
-        return SendAsync<TResponse>(HttpMethod.Put, url, payload, headers, cookies);
+        return SendAsync<TResponse>(HttpMethod.Put, url, payload, headers, freshSession);
     }
 
     public Task<HttpResponseWrapper<TResponse>?> DeleteAsync<TResponse>(
         string url,
         IDictionary<string, string>? headers = null,
-        IDictionary<string, string>? cookies = null)
+        bool freshSession = false)
     {
-        return SendAsync<TResponse>(HttpMethod.Delete, url, null, headers, cookies);
+        return SendAsync<TResponse>(HttpMethod.Delete, url, null, headers, freshSession);
     }
 
     private async Task<HttpResponseWrapper<TResponse>?> SendAsync<TResponse>(
@@ -89,8 +94,29 @@ public class HttpHelper : IHttpHelper
         string url,
         object? payload,
         IDictionary<string, string>? headers,
-        IDictionary<string, string>? cookies)
+        bool freshSession)
     {
+        HttpClient httpClient;
+
+        if (freshSession)
+        {
+            // Create a fresh client with a new CookieContainer
+            var handler = new HttpClientHandler
+            {
+                CookieContainer = new CookieContainer(),
+                UseCookies = true
+            };
+            httpClient = new HttpClient(handler)
+            {
+                Timeout = TimeSpan.FromSeconds(30)
+            };
+        }
+        else
+        {
+            // Reuse default HttpClient
+            httpClient = _defaultClient;
+        }
+
         using var request = new HttpRequestMessage(method, url);
 
         // Add headers
@@ -102,19 +128,6 @@ public class HttpHelper : IHttpHelper
             }
         }
 
-        // Attach cookies
-        if (cookies != null && cookies.Count > 0)
-        {
-            var hasCookieHeader = headers?.Keys
-                .Any(k => string.Equals(k, "Cookie", System.StringComparison.OrdinalIgnoreCase)) ?? false;
-
-            if (!hasCookieHeader)
-            {
-                var cookieHeader = string.Join("; ", cookies.Select(kv => $"{kv.Key}={kv.Value}"));
-                request.Headers.TryAddWithoutValidation("Cookie", cookieHeader);
-            }
-        }
-
         // Attach payload
         if (payload != null)
         {
@@ -122,7 +135,7 @@ public class HttpHelper : IHttpHelper
             request.Content = new StringContent(json, Encoding.UTF8, "application/json");
         }
 
-        using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+        using var response = await httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
 
         response.EnsureSuccessStatusCode();
 
@@ -144,7 +157,7 @@ public class HttpHelper : IHttpHelper
             Headers = response.Headers
         };
     }
-    
+
     public string? GetCookie(string url, HttpResponseHeaders headers, string cookieName)
     {
         if (headers.TryGetValues("Set-Cookie", out var setCookieHeaders))
@@ -152,16 +165,12 @@ public class HttpHelper : IHttpHelper
             foreach (var setCookie in setCookieHeaders)
             {
                 var uri = new Uri(url);
-                // Use CookieContainer to parse the cookie safely
                 var container = new CookieContainer();
                 container.SetCookies(uri, setCookie);
 
-                // Now get the cookie by name
                 var cookie = container.GetCookies(uri)[cookieName];
-                if (cookie == null) continue;
-
-                var value = cookie.Value;
-                return value;
+                if (cookie != null)
+                    return cookie.Value;
             }
         }
 

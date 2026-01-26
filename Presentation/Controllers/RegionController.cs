@@ -1,5 +1,4 @@
-using Application.Models.Products;
-using Application.Products.Actions;
+using Application.Actions.Region;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Presentation.Controllers;
@@ -8,19 +7,25 @@ namespace Presentation.Controllers;
 [Route("[controller]")]
 public class RegionController : ControllerBase
 {
-    [HttpGet(Name = nameof(GetRegions))]
-    public async Task<IEnumerable<Product>> GetRegions()
+    private readonly IWoolworthsRegionAction _woolworthsRegionAction;
+
+    public RegionController(IWoolworthsRegionAction woolworthsRegionAction)
     {
-        var result = await _woolworthsRegionAction.CreateSessionWithRegionAsync(2315277);
-        return [];
-    } 
-    
-    
-    [HttpGet(Name = nameof(SelectRegion))]
-    public async Task<IEnumerable<Product>> SelectRegion([FromQuery(Name = "term")] string term)
-    {
-        var result = await _woolworthsRegionAction.CreateSessionWithRegionAsync(2315277);
-        return [];
+        _woolworthsRegionAction = woolworthsRegionAction;
     }
-    
+
+    [HttpGet("all", Name = nameof(GetAllRegions))]
+    public async Task<IEnumerable<WoolworthsGetRegionsResult>> GetAllRegions()
+    {
+        var result = await _woolworthsRegionAction.GetRegionsAsync();
+        return result.Data!;
+    }
+
+
+    [HttpGet("select/region/{id:int}")]
+    public async Task<WoolworthsChangeRegionResult> SelectRegion(int id)
+    {
+        var result = await _woolworthsRegionAction.CreateSessionWithRegionAsync(id);
+        return result.Data!;
+    }
 }

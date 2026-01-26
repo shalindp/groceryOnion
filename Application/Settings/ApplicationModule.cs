@@ -10,6 +10,6 @@ public static class ApplicationModule
     {
         services.AddTransient<IPaknSaveProductAction, PaknSaveProductAction>();
         services.AddTransient<IWoolworthsRegionAction, WoolworthsRegionAction>();
-        services.AddTransient<IWoolworthsProductAction, WoolworthsProductAction>();
+        // services.AddTransient<IWoolworthsProductAction, WoolworthsProductAction>();
     }
 }

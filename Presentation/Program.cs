@@ -13,15 +13,18 @@ builder.Services.AddSwaggerGen(options =>
     // some other configs
 });
 
-builder.Services.AddHttpClient<IHttpHelper, HttpHelper>(client =>
-{
-    client.Timeout = TimeSpan.FromSeconds(30);
-    client.DefaultRequestHeaders.Add("Accept", "application/json");
-    client.DefaultRequestHeaders.Add("User-Agent", "api-client/1.0");
-    
-    // woolworths specific headers
-    client.DefaultRequestHeaders.Add("x-requested-with", "OnlineShopping.WebApp");
-});
+// builder.Services.AddHttpClient<IHttpHelper, HttpHelper>(client =>
+// {
+//     client.Timeout = TimeSpan.FromSeconds(30);
+//     client.DefaultRequestHeaders.Add("Accept", "application/json");
+//     client.DefaultRequestHeaders.Add("User-Agent", "api-client/1.0");
+//     
+//     // woolworths specific headers
+//     client.DefaultRequestHeaders.Add("x-requested-with", "OnlineShopping.WebApp");
+// });
+
+builder.Services.AddScoped<IHttpHelper, HttpHelper>();
+
 
 PersistenceModule.AddToService(builder.Services);
 ApplicationModule.AddToService(builder.Services);
