@@ -35,9 +35,9 @@ public class QueriesSql
     private NpgsqlTransaction? Transaction { get; }
     private string? ConnectionString { get; }
 
-    private const string CreateProductSql = "insert into Product (name, brand) values (@name, @brand) returning product.id, product.name, product.brand, product.is_deleted, product.created_utc, product.last_updated_utc";
+    private const string CreateProductSql = "insert into Product (name, brand, sku, store_type, image_url, max_quantity) values (@name, @brand, @sku, @store_type, @image_url, @max_quanitity) returning product.id, product.sku, product.name, product.brand, product.store_type, product.image_url, product.max_quantity, product.is_deleted, product.created_utc, product.last_updated_utc";
     public readonly record struct CreateProductRow(Product? Product);
-    public readonly record struct CreateProductArgs(string Name, string? Brand);
+    public readonly record struct CreateProductArgs(string Name, string? Brand, string Sku, short StoreType, string? ImageUrl, decimal MaxQuanitity);
     public async Task<CreateProductRow?> CreateProduct(CreateProductArgs args)
     {
         if (this.Transaction == null)
@@ -48,6 +48,10 @@ public class QueriesSql
                 {
                     command.Parameters.AddWithValue("@name", args.Name);
                     command.Parameters.AddWithValue("@brand", args.Brand ?? (object)DBNull.Value);
+                    command.Parameters.AddWithValue("@sku", args.Sku);
+                    command.Parameters.AddWithValue("@store_type", args.StoreType);
+                    command.Parameters.AddWithValue("@image_url", args.ImageUrl ?? (object)DBNull.Value);
+                    command.Parameters.AddWithValue("@max_quanitity", args.MaxQuanitity);
                     using (var reader = await command.ExecuteReaderAsync())
                     {
                         if (await reader.ReadAsync())
@@ -57,11 +61,15 @@ public class QueriesSql
                                 Product = new Product
                                 {
                                     Id = reader.GetFieldValue<Guid>(0),
-                                    Name = reader.GetString(1),
-                                    Brand = reader.IsDBNull(2) ? null : reader.GetString(2),
-                                    IsDeleted = reader.GetBoolean(3),
-                                    CreatedUtc = reader.GetDateTime(4),
-                                    LastUpdatedUtc = reader.GetDateTime(5)
+                                    Sku = reader.GetString(1),
+                                    Name = reader.GetString(2),
+                                    Brand = reader.IsDBNull(3) ? null : reader.GetString(3),
+                                    StoreType = reader.GetInt16(4),
+                                    ImageUrl = reader.IsDBNull(5) ? null : reader.GetString(5),
+                                    MaxQuantity = reader.GetDecimal(6),
+                                    IsDeleted = reader.GetBoolean(7),
+                                    CreatedUtc = reader.GetDateTime(8),
+                                    LastUpdatedUtc = reader.GetDateTime(9)
                                 }
                             };
                         }
@@ -80,6 +88,10 @@ public class QueriesSql
             command.Transaction = this.Transaction;
             command.Parameters.AddWithValue("@name", args.Name);
             command.Parameters.AddWithValue("@brand", args.Brand ?? (object)DBNull.Value);
+            command.Parameters.AddWithValue("@sku", args.Sku);
+            command.Parameters.AddWithValue("@store_type", args.StoreType);
+            command.Parameters.AddWithValue("@image_url", args.ImageUrl ?? (object)DBNull.Value);
+            command.Parameters.AddWithValue("@max_quanitity", args.MaxQuanitity);
             using (var reader = await command.ExecuteReaderAsync())
             {
                 if (await reader.ReadAsync())
@@ -89,11 +101,15 @@ public class QueriesSql
                         Product = new Product
                         {
                             Id = reader.GetFieldValue<Guid>(0),
-                            Name = reader.GetString(1),
-                            Brand = reader.IsDBNull(2) ? null : reader.GetString(2),
-                            IsDeleted = reader.GetBoolean(3),
-                            CreatedUtc = reader.GetDateTime(4),
-                            LastUpdatedUtc = reader.GetDateTime(5)
+                            Sku = reader.GetString(1),
+                            Name = reader.GetString(2),
+                            Brand = reader.IsDBNull(3) ? null : reader.GetString(3),
+                            StoreType = reader.GetInt16(4),
+                            ImageUrl = reader.IsDBNull(5) ? null : reader.GetString(5),
+                            MaxQuantity = reader.GetDecimal(6),
+                            IsDeleted = reader.GetBoolean(7),
+                            CreatedUtc = reader.GetDateTime(8),
+                            LastUpdatedUtc = reader.GetDateTime(9)
                         }
                     };
                 }
@@ -103,8 +119,8 @@ public class QueriesSql
         return null;
     }
 
-    private const string CreateProductsSql = "COPY product (name, brand) FROM STDIN (FORMAT BINARY)";
-    public readonly record struct CreateProductsArgs(string Name, string? Brand);
+    private const string CreateProductsSql = "COPY product (name, brand, sku, store_type, image_url, max_quantity) FROM STDIN (FORMAT BINARY)";
+    public readonly record struct CreateProductsArgs(string Name, string? Brand, string Sku, short StoreType, string? ImageUrl, decimal MaxQuantity);
     public async Task CreateProducts(List<CreateProductsArgs> args)
     {
         using (var connection = new NpgsqlConnection(ConnectionString))
@@ -117,12 +133,95 @@ public class QueriesSql
                     await writer.StartRowAsync();
                     await writer.WriteAsync(row.Name);
                     await writer.WriteAsync(row.Brand ?? (object)DBNull.Value);
+                    await writer.WriteAsync(row.Sku);
+                    await writer.WriteAsync(row.StoreType);
+                    await writer.WriteAsync(row.ImageUrl ?? (object)DBNull.Value);
+                    await writer.WriteAsync(row.MaxQuantity);
                 }
 
                 await writer.CompleteAsync();
             }
 
             await connection.CloseAsync();
+        }
+    }
+
+    private const string GetWoolworthsProductsSql = "select id, sku, name, brand, store_type, image_url, max_quantity, is_deleted, created_utc, last_updated_utc from product where sku = any(@skus::varchar(255)[]) and store_type = 0 and is_deleted = false";
+    public readonly record struct GetWoolworthsProductsRow(Guid Id, string Sku, string Name, string? Brand, short StoreType, string? ImageUrl, decimal MaxQuantity, bool IsDeleted, DateTime CreatedUtc, DateTime LastUpdatedUtc);
+    public readonly record struct GetWoolworthsProductsArgs(string[] Skus);
+    public async Task<List<GetWoolworthsProductsRow>> GetWoolworthsProducts(GetWoolworthsProductsArgs args)
+    {
+        if (this.Transaction == null)
+        {
+            using (var connection = NpgsqlDataSource.Create(ConnectionString!))
+            {
+                using (var command = connection.CreateCommand(GetWoolworthsProductsSql))
+                {
+                    command.Parameters.AddWithValue("@skus", args.Skus);
+                    using (var reader = await command.ExecuteReaderAsync())
+                    {
+                        var result = new List<GetWoolworthsProductsRow>();
+                        while (await reader.ReadAsync())
+                            result.Add(new GetWoolworthsProductsRow { Id = reader.GetFieldValue<Guid>(0), Sku = reader.GetString(1), Name = reader.GetString(2), Brand = reader.IsDBNull(3) ? null : reader.GetString(3), StoreType = reader.GetInt16(4), ImageUrl = reader.IsDBNull(5) ? null : reader.GetString(5), MaxQuantity = reader.GetDecimal(6), IsDeleted = reader.GetBoolean(7), CreatedUtc = reader.GetDateTime(8), LastUpdatedUtc = reader.GetDateTime(9) });
+                        return result;
+                    }
+                }
+            }
+        }
+
+        if (this.Transaction?.Connection == null || this.Transaction?.Connection.State != System.Data.ConnectionState.Open)
+            throw new InvalidOperationException("Transaction is provided, but its connection is null.");
+        using (var command = this.Transaction.Connection.CreateCommand())
+        {
+            command.CommandText = GetWoolworthsProductsSql;
+            command.Transaction = this.Transaction;
+            command.Parameters.AddWithValue("@skus", args.Skus);
+            using (var reader = await command.ExecuteReaderAsync())
+            {
+                var result = new List<GetWoolworthsProductsRow>();
+                while (await reader.ReadAsync())
+                    result.Add(new GetWoolworthsProductsRow { Id = reader.GetFieldValue<Guid>(0), Sku = reader.GetString(1), Name = reader.GetString(2), Brand = reader.IsDBNull(3) ? null : reader.GetString(3), StoreType = reader.GetInt16(4), ImageUrl = reader.IsDBNull(5) ? null : reader.GetString(5), MaxQuantity = reader.GetDecimal(6), IsDeleted = reader.GetBoolean(7), CreatedUtc = reader.GetDateTime(8), LastUpdatedUtc = reader.GetDateTime(9) });
+                return result;
+            }
+        }
+    }
+
+    private const string UpdateProductSql = "update product set name = @name, brand = @brand, image_url = @image_url, max_quantity = @max_quantity, last_updated_utc = now() where sku = @sku and store_type = @store_type";
+    public readonly record struct UpdateProductArgs(string Name, string? Brand, string? ImageUrl, decimal MaxQuantity, string Sku, short StoreType);
+    public async Task UpdateProduct(UpdateProductArgs args)
+    {
+        if (this.Transaction == null)
+        {
+            using (var connection = NpgsqlDataSource.Create(ConnectionString!))
+            {
+                using (var command = connection.CreateCommand(UpdateProductSql))
+                {
+                    command.Parameters.AddWithValue("@name", args.Name);
+                    command.Parameters.AddWithValue("@brand", args.Brand ?? (object)DBNull.Value);
+                    command.Parameters.AddWithValue("@image_url", args.ImageUrl ?? (object)DBNull.Value);
+                    command.Parameters.AddWithValue("@max_quantity", args.MaxQuantity);
+                    command.Parameters.AddWithValue("@sku", args.Sku);
+                    command.Parameters.AddWithValue("@store_type", args.StoreType);
+                    await command.ExecuteNonQueryAsync();
+                }
+            }
+
+            return;
+        }
+
+        if (this.Transaction?.Connection == null || this.Transaction?.Connection.State != System.Data.ConnectionState.Open)
+            throw new InvalidOperationException("Transaction is provided, but its connection is null.");
+        using (var command = this.Transaction.Connection.CreateCommand())
+        {
+            command.CommandText = UpdateProductSql;
+            command.Transaction = this.Transaction;
+            command.Parameters.AddWithValue("@name", args.Name);
+            command.Parameters.AddWithValue("@brand", args.Brand ?? (object)DBNull.Value);
+            command.Parameters.AddWithValue("@image_url", args.ImageUrl ?? (object)DBNull.Value);
+            command.Parameters.AddWithValue("@max_quantity", args.MaxQuantity);
+            command.Parameters.AddWithValue("@sku", args.Sku);
+            command.Parameters.AddWithValue("@store_type", args.StoreType);
+            await command.ExecuteNonQueryAsync();
         }
     }
 }

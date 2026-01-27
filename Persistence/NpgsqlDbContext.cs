@@ -12,10 +12,8 @@ public class NpgsqlDbContext: INpgsqlDbContext
         Queries = new QueriesSql(connectionString);
     }
 
-    // Default (no transaction)
     public QueriesSql Queries { get; }
 
-    // Run inside a transaction
     public async Task<TResult> WithTransactionAsync<TResult>(Func<QueriesSql, Task<TResult>> action)
     {
         await using var connection = new NpgsqlConnection(_connectionString);
@@ -38,8 +36,6 @@ public class NpgsqlDbContext: INpgsqlDbContext
             throw;
         }
     }
-
-
 }
 
 public interface INpgsqlDbContext

@@ -1,9 +1,23 @@
 -- name: CreateProduct :one
-insert into Product (name, brand)
-values (@name, @brand) returning sqlc.embed(Product);
-
+insert into Product (name, brand, sku, store_type, image_url, max_quantity)
+values (@name, @brand, @sku, @store_type, @image_url, @max_quanitity)
+returning sqlc.embed(Product);
 
 
 -- name: CreateProducts :copyfrom
-insert into Product (name, brand)
-values (@name, @brand);
+insert into Product (name, brand, sku, store_type, image_url, max_quantity)
+values (@name, @brand, @sku, @store_type, @image_url, @max_quantity);
+
+-- name: GetWoolworthsProducts :many
+select *
+from product
+where sku = any(@skus::varchar(255)[]) and store_type = 0 and is_deleted = false;
+
+-- name: UpdateProduct :exec
+update product set
+    name = @name,
+    brand = @brand,
+    image_url = @image_url,
+    max_quantity = @max_quantity,
+    last_updated_utc = now()
+where sku = @sku and store_type = @store_type;

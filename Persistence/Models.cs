@@ -4,4 +4,4 @@ using System.Collections.Generic;
 using System.Linq;
 
 namespace Persistence;
-public readonly record struct Product(Guid Id, string Name, string? Brand, bool IsDeleted, DateTime CreatedUtc, DateTime LastUpdatedUtc);
+public readonly record struct Product(Guid Id, string Sku, string Name, string? Brand, short StoreType, string? ImageUrl, decimal MaxQuantity, bool IsDeleted, DateTime CreatedUtc, DateTime LastUpdatedUtc);

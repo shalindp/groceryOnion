@@ -10,7 +10,6 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new OpenApiInfo { Title = "Some API v1", Version = "v1" });
-    // some other configs
 });
 
 // builder.Services.AddHttpClient<IHttpHelper, HttpHelper>(client =>
