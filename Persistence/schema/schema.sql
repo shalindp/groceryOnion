@@ -15,5 +15,25 @@ create table Product
     last_updated_utc TIMESTAMPTZ    not null default now()
 );
 
--- optional: define type if needed
-create type sku_store_pair as (sku text, store_name text);
+drop table if exists Product_Price;
+CREATE TABLE Product_Price
+(
+    product_id      UUID           NOT NULL
+        REFERENCES Product (id) ON DELETE CASCADE,
+
+    product_sku     varchar(255)   NOT NULL,
+    store_type      smallint       NOT NULL,
+    region_id       integer        NOT NULL,
+
+    original_price  numeric(10, 2) NOT NULL,
+    sale_price      numeric(10, 2),
+    multi_buy_price numeric(10, 2),
+
+    created_utc      timestamptz NOT NULL DEFAULT now(),
+    last_updated_utc timestamptz NOT NULL DEFAULT now(),
+
+    -- 👇 composite identity for price rows
+    CONSTRAINT pk_product_price
+        PRIMARY KEY (product_id, product_sku, store_type, region_id)
+);
+

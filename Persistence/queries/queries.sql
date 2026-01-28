@@ -3,7 +3,6 @@ insert into Product (name, brand, sku, store_type, image_url, max_quantity)
 values (@name, @brand, @sku, @store_type, @image_url, @max_quanitity)
 returning sqlc.embed(Product);
 
-
 -- name: CreateProducts :copyfrom
 insert into Product (name, brand, sku, store_type, image_url, max_quantity)
 values (@name, @brand, @sku, @store_type, @image_url, @max_quantity);
@@ -21,3 +20,7 @@ update product set
     max_quantity = @max_quantity,
     last_updated_utc = now()
 where sku = @sku and store_type = @store_type;
+
+-- name: CreateProductPrice :exec
+insert into Product_Price (product_id, product_sku, store_type, region_id, original_price, sale_price, multi_buy_price)
+values (@product_id, @product_sku, @store_type, @region_id, @original_price, @sale_price, @multi_buy_price);

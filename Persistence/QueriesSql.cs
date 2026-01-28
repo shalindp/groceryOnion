@@ -224,4 +224,45 @@ public class QueriesSql
             await command.ExecuteNonQueryAsync();
         }
     }
+
+    private const string CreateProductPriceSql = "insert into Product_Price (product_id, product_sku, store_type, region_id, original_price, sale_price, multi_buy_price) values (@product_id, @product_sku, @store_type, @region_id, @original_price, @sale_price, @multi_buy_price)";
+    public readonly record struct CreateProductPriceArgs(Guid ProductId, string ProductSku, short StoreType, int RegionId, decimal OriginalPrice, decimal? SalePrice, decimal? MultiBuyPrice);
+    public async Task CreateProductPrice(CreateProductPriceArgs args)
+    {
+        if (this.Transaction == null)
+        {
+            using (var connection = NpgsqlDataSource.Create(ConnectionString!))
+            {
+                using (var command = connection.CreateCommand(CreateProductPriceSql))
+                {
+                    command.Parameters.AddWithValue("@product_id", args.ProductId);
+                    command.Parameters.AddWithValue("@product_sku", args.ProductSku);
+                    command.Parameters.AddWithValue("@store_type", args.StoreType);
+                    command.Parameters.AddWithValue("@region_id", args.RegionId);
+                    command.Parameters.AddWithValue("@original_price", args.OriginalPrice);
+                    command.Parameters.AddWithValue("@sale_price", args.SalePrice ?? (object)DBNull.Value);
+                    command.Parameters.AddWithValue("@multi_buy_price", args.MultiBuyPrice ?? (object)DBNull.Value);
+                    await command.ExecuteNonQueryAsync();
+                }
+            }
+
+            return;
+        }
+
+        if (this.Transaction?.Connection == null || this.Transaction?.Connection.State != System.Data.ConnectionState.Open)
+            throw new InvalidOperationException("Transaction is provided, but its connection is null.");
+        using (var command = this.Transaction.Connection.CreateCommand())
+        {
+            command.CommandText = CreateProductPriceSql;
+            command.Transaction = this.Transaction;
+            command.Parameters.AddWithValue("@product_id", args.ProductId);
+            command.Parameters.AddWithValue("@product_sku", args.ProductSku);
+            command.Parameters.AddWithValue("@store_type", args.StoreType);
+            command.Parameters.AddWithValue("@region_id", args.RegionId);
+            command.Parameters.AddWithValue("@original_price", args.OriginalPrice);
+            command.Parameters.AddWithValue("@sale_price", args.SalePrice ?? (object)DBNull.Value);
+            command.Parameters.AddWithValue("@multi_buy_price", args.MultiBuyPrice ?? (object)DBNull.Value);
+            await command.ExecuteNonQueryAsync();
+        }
+    }
 }

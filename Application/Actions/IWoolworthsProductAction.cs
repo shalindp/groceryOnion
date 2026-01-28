@@ -3,31 +3,41 @@ using Application.Enums;
 using Application.Models;
 using Persistence;
 
-namespace Application.Actions.Products;
+namespace Application.Actions;
 
 public interface IWoolworthsProductAction
 {
     public Task SyncProductsAsync();
     public Task<IList<Categoery>> GetAllCategoriesAsync();
+
+    public Task<IList<Product>> SearchProductsAsync(string searchTerm, int[] woolworthRegionIds);
 }
 
 public class WoolworthsProductAction : IWoolworthsProductAction
 {
     private readonly IHttpHelper _httpHelper;
     private readonly INpgsqlDbContext _dbContext;
+    private readonly IWoolworthsRegionAction _woolworthsRegionAction;
 
-    public WoolworthsProductAction(IHttpHelper httpHelper, INpgsqlDbContext dbContext)
+    public WoolworthsProductAction(IHttpHelper httpHelper, INpgsqlDbContext dbContext,
+        IWoolworthsRegionAction woolworthsRegionAction)
     {
         _httpHelper = httpHelper;
         _dbContext = dbContext;
+        _woolworthsRegionAction = woolworthsRegionAction;
     }
 
-    private record AllProductsResponse(ProductsResponse Products);
+    private record AllProductsResponse(ContextResponse Context, ProductsResponse Products);
+
+    private record ContextResponse(FulfillmentResponse Fulfilment);
+
+    private record FulfillmentResponse(string Address);
 
     private record ProductsResponse(IList<ItemResponse> Items);
 
     private record ItemResponse(
         string Type,
+        string Sku,
         string Barcode,
         string Name,
         string Brand,
@@ -74,7 +84,7 @@ public class WoolworthsProductAction : IWoolworthsProductAction
 
                 allProducts.AddRange(products.Select(c => new Product
                 {
-                    Sku = c.Barcode,
+                    Sku = c.Sku,
                     Name = c.Name,
                     Brand = c.Brand,
                     StoreType = (int)StoreType.Woolworths,
@@ -82,7 +92,7 @@ public class WoolworthsProductAction : IWoolworthsProductAction
                     MaxQuantity = (int)c.Quantity.Max,
                 }));
 
-                Thread.Sleep(200);
+                // Thread.Sleep(200);
             }
         }
 
@@ -165,5 +175,85 @@ public class WoolworthsProductAction : IWoolworthsProductAction
         return response!.Body!.Specials
             .Select(c => new Categoery(c.Id, c.Label, c.Url, StoreType.Woolworths))
             .ToList();
+    }
+
+    public async Task<IList<Product>> SearchProductsAsync(string searchTerm, int[] woolworthRegionIds)
+    {
+        var xx = new List<Task<IList<Product>>>();
+        foreach (var woolworthRegionId in woolworthRegionIds)
+        {
+            var x = SearchProductsForRegionAsync(searchTerm, woolworthRegionId);
+            xx.Add(x);
+        }
+
+        var t = await Task.WhenAll(xx);
+        var xxx = t.SelectMany(c => c).ToList();
+        return xxx;
+    }
+
+    private async Task<IList<Product>> SearchProductsForRegionAsync(string searchTerm, int woolworthRegionId)
+    {
+        var products = new List<Product>();
+        var session = await _woolworthsRegionAction.CreateSessionWithRegionAsync(woolworthRegionId);
+
+        var url = (string search, int page) =>
+            $"https://www.woolworths.co.nz/api/v1/products?target=search&search={search}&inStockProductsOnly=false&size=120&page={page}";
+
+        var cookies = new Dictionary<string, string>
+        {
+            ["ASP.NET_SessionId"] = session.SessionId,
+            ["aga"] = session.Aga
+        };
+
+        for (var page = 1; page <= 1000; page++)
+        {
+            var response = await _httpHelper.GetAsync<AllProductsResponse>(url(searchTerm, page),
+                headers: Headers.WoolworthsDefaultHeaders, cookies: cookies);
+            var productsResponse = response.Body!.Products.Items;
+
+            if (productsResponse.Count == 0)
+            {
+                break;
+            }
+
+            products.AddRange(productsResponse.Where(c => c.Type == "Product").Select(c => new Product
+            {
+                Sku = c.Sku,
+                Name = c.Name,
+                Brand = c.Brand,
+                StoreType = (int)StoreType.Woolworths,
+                ImageUrl = c.Images.Big,
+                MaxQuantity = (int)c.Quantity.Max,
+            }));
+        }
+
+        var tasks = new List<Task<PriceResponse>>();
+        foreach (var itemResponse in products.Take(10))
+        {
+            var x = Fok(itemResponse.Sku, cookies);
+            tasks.Add(x);
+        }
+
+        var xx = await Task.WhenAll(tasks);
+        Console.WriteLine("DONE");
+        return products;
+    }
+
+    // private async Task<IList<Product>> Sss(string searchTerm)
+    // {
+    // var url = (string search)=> $"https://www.woolworths.co.nz/api/v1/products?target=search&search={search}&inStockProductsOnly=false&size=120";
+
+    // }
+
+    private record Hello(PriceResponse price);
+
+    private async Task<PriceResponse> Fok(string sku, Dictionary<string, string> cookies)
+    {
+        var url = $"https://www.woolworths.co.nz/api/v1/products/{sku}";
+
+        var response =
+            await _httpHelper.GetAsync<Hello>(url, headers: Headers.WoolworthsDefaultHeaders, cookies: cookies);
+
+        return response.Body.price;
     }
 }

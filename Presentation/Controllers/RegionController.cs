@@ -1,4 +1,4 @@
-using Application.Actions.Region;
+using Application.Actions;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Presentation.Controllers;
@@ -18,14 +18,16 @@ public class RegionController : ControllerBase
     public async Task<IEnumerable<WoolworthsGetRegionsResult>> GetAllRegions()
     {
         var result = await _woolworthsRegionAction.GetRegionsAsync();
-        return result.Data!;
+        return result;
     }
 
 
     [HttpGet("select/region/{id:int}")]
     public async Task<WoolworthsChangeRegionResult> SelectRegion(int id)
     {
-        var result = await _woolworthsRegionAction.CreateSessionWithRegionAsync(id);
-        return result.Data!;
+        // var result = await _woolworthsRegionAction.CreateSessionWithRegionAsync(id);
+
+        
+        return null;
     }
 }

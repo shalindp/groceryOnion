@@ -1,5 +1,4 @@
-﻿using Application.Actions.Products;
-using Application.Actions.Region;
+﻿using Application.Actions;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Application.Settings;
