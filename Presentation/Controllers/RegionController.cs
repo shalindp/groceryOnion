@@ -14,7 +14,7 @@ public class RegionController : ControllerBase
         _woolworthsRegionAction = woolworthsRegionAction;
     }
 
-    [HttpGet("all", Name = nameof(GetAllRegions))]
+    [HttpGet(Name = nameof(GetAllRegions))]
     public async Task<IEnumerable<WoolworthsGetRegionsResult>> GetAllRegions()
     {
         var result = await _woolworthsRegionAction.GetRegionsAsync();

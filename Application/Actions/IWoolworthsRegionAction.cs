@@ -49,7 +49,7 @@ public class WoolworthsRegionAction : IWoolworthsRegionAction
             addressId = regionId
         };
 
-        var result = await _httpHelper.PutAsync<ChangeRegionResponse>(url, body, headers: Headers.WoolworthsDefaultHeaders)!;
+        var result = await _httpHelper.PutAsync<ChangeRegionResponse>(url, body, headers: Headers.WoolworthsDefaultHeaders, freshSession:true)!;
         var sessionId = _httpHelper.GetCookie(url, result!.Headers, Cookies.AspNetSessionIdCookieName);
         var aga = _httpHelper.GetCookie(url, result!.Headers, Cookies.Aga);
 

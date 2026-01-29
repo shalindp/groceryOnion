@@ -5,6 +5,7 @@
 // ReSharper disable NotAccessedPositionalProperty.Global
 // ReSharper disable UnusedAutoPropertyAccessor.Global
 using Npgsql;
+using NpgsqlTypes;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -35,7 +36,7 @@ public class QueriesSql
     private NpgsqlTransaction? Transaction { get; }
     private string? ConnectionString { get; }
 
-    private const string CreateProductSql = "insert into Product (name, brand, sku, store_type, image_url, max_quantity) values (@name, @brand, @sku, @store_type, @image_url, @max_quanitity) returning product.id, product.sku, product.name, product.brand, product.store_type, product.image_url, product.max_quantity, product.is_deleted, product.created_utc, product.last_updated_utc";
+    private const string CreateProductSql = "insert into Product (name, brand, sku, store_type, image_url, max_quantity) values (@name, @brand, @sku, @store_type, @image_url, @max_quanitity) returning product.id, product.sku, product.name, product.brand, product.store_type, product.image_url, product.max_quantity, product.is_deleted, product.created_utc, product.last_updated_utc, product.search_vector";
     public readonly record struct CreateProductRow(Product? Product);
     public readonly record struct CreateProductArgs(string Name, string? Brand, string Sku, short StoreType, string? ImageUrl, decimal MaxQuanitity);
     public async Task<CreateProductRow?> CreateProduct(CreateProductArgs args)
@@ -69,7 +70,8 @@ public class QueriesSql
                                     MaxQuantity = reader.GetDecimal(6),
                                     IsDeleted = reader.GetBoolean(7),
                                     CreatedUtc = reader.GetDateTime(8),
-                                    LastUpdatedUtc = reader.GetDateTime(9)
+                                    LastUpdatedUtc = reader.GetDateTime(9),
+                                    SearchVector = reader.IsDBNull(10) ? null : reader.GetFieldValue<NpgsqlTsVector>(10)
                                 }
                             };
                         }
@@ -109,7 +111,8 @@ public class QueriesSql
                             MaxQuantity = reader.GetDecimal(6),
                             IsDeleted = reader.GetBoolean(7),
                             CreatedUtc = reader.GetDateTime(8),
-                            LastUpdatedUtc = reader.GetDateTime(9)
+                            LastUpdatedUtc = reader.GetDateTime(9),
+                            SearchVector = reader.IsDBNull(10) ? null : reader.GetFieldValue<NpgsqlTsVector>(10)
                         }
                     };
                 }
@@ -146,8 +149,8 @@ public class QueriesSql
         }
     }
 
-    private const string GetWoolworthsProductsSql = "select id, sku, name, brand, store_type, image_url, max_quantity, is_deleted, created_utc, last_updated_utc from product where sku = any(@skus::varchar(255)[]) and store_type = 0 and is_deleted = false";
-    public readonly record struct GetWoolworthsProductsRow(Guid Id, string Sku, string Name, string? Brand, short StoreType, string? ImageUrl, decimal MaxQuantity, bool IsDeleted, DateTime CreatedUtc, DateTime LastUpdatedUtc);
+    private const string GetWoolworthsProductsSql = "select id, sku, name, brand, store_type, image_url, max_quantity, is_deleted, created_utc, last_updated_utc, search_vector from product where sku = any(@skus::varchar(255)[]) and store_type = 0 and is_deleted = false";
+    public readonly record struct GetWoolworthsProductsRow(Guid Id, string Sku, string Name, string? Brand, short StoreType, string? ImageUrl, decimal MaxQuantity, bool IsDeleted, DateTime CreatedUtc, DateTime LastUpdatedUtc, NpgsqlTsVector? SearchVector);
     public readonly record struct GetWoolworthsProductsArgs(string[] Skus);
     public async Task<List<GetWoolworthsProductsRow>> GetWoolworthsProducts(GetWoolworthsProductsArgs args)
     {
@@ -162,7 +165,7 @@ public class QueriesSql
                     {
                         var result = new List<GetWoolworthsProductsRow>();
                         while (await reader.ReadAsync())
-                            result.Add(new GetWoolworthsProductsRow { Id = reader.GetFieldValue<Guid>(0), Sku = reader.GetString(1), Name = reader.GetString(2), Brand = reader.IsDBNull(3) ? null : reader.GetString(3), StoreType = reader.GetInt16(4), ImageUrl = reader.IsDBNull(5) ? null : reader.GetString(5), MaxQuantity = reader.GetDecimal(6), IsDeleted = reader.GetBoolean(7), CreatedUtc = reader.GetDateTime(8), LastUpdatedUtc = reader.GetDateTime(9) });
+                            result.Add(new GetWoolworthsProductsRow { Id = reader.GetFieldValue<Guid>(0), Sku = reader.GetString(1), Name = reader.GetString(2), Brand = reader.IsDBNull(3) ? null : reader.GetString(3), StoreType = reader.GetInt16(4), ImageUrl = reader.IsDBNull(5) ? null : reader.GetString(5), MaxQuantity = reader.GetDecimal(6), IsDeleted = reader.GetBoolean(7), CreatedUtc = reader.GetDateTime(8), LastUpdatedUtc = reader.GetDateTime(9), SearchVector = reader.IsDBNull(10) ? null : reader.GetFieldValue<NpgsqlTsVector>(10) });
                         return result;
                     }
                 }
@@ -180,7 +183,7 @@ public class QueriesSql
             {
                 var result = new List<GetWoolworthsProductsRow>();
                 while (await reader.ReadAsync())
-                    result.Add(new GetWoolworthsProductsRow { Id = reader.GetFieldValue<Guid>(0), Sku = reader.GetString(1), Name = reader.GetString(2), Brand = reader.IsDBNull(3) ? null : reader.GetString(3), StoreType = reader.GetInt16(4), ImageUrl = reader.IsDBNull(5) ? null : reader.GetString(5), MaxQuantity = reader.GetDecimal(6), IsDeleted = reader.GetBoolean(7), CreatedUtc = reader.GetDateTime(8), LastUpdatedUtc = reader.GetDateTime(9) });
+                    result.Add(new GetWoolworthsProductsRow { Id = reader.GetFieldValue<Guid>(0), Sku = reader.GetString(1), Name = reader.GetString(2), Brand = reader.IsDBNull(3) ? null : reader.GetString(3), StoreType = reader.GetInt16(4), ImageUrl = reader.IsDBNull(5) ? null : reader.GetString(5), MaxQuantity = reader.GetDecimal(6), IsDeleted = reader.GetBoolean(7), CreatedUtc = reader.GetDateTime(8), LastUpdatedUtc = reader.GetDateTime(9), SearchVector = reader.IsDBNull(10) ? null : reader.GetFieldValue<NpgsqlTsVector>(10) });
                 return result;
             }
         }
@@ -263,6 +266,50 @@ public class QueriesSql
             command.Parameters.AddWithValue("@sale_price", args.SalePrice ?? (object)DBNull.Value);
             command.Parameters.AddWithValue("@multi_buy_price", args.MultiBuyPrice ?? (object)DBNull.Value);
             await command.ExecuteNonQueryAsync();
+        }
+    }
+
+    private const string SearchProductsSql = "SELECT product.id, product.sku, product.name, product.brand, product.store_type, product.image_url, product.max_quantity, product.is_deleted, product.created_utc, product.last_updated_utc, product.search_vector FROM Product WHERE is_deleted = false AND search_vector @@ plainto_tsquery('english', @query) ORDER BY ts_rank_cd(search_vector, plainto_tsquery('english', @query)) DESC, id asc LIMIT @limit::int OFFSET @offset::int";
+    public readonly record struct SearchProductsRow(Product? Product);
+    public readonly record struct SearchProductsArgs(string Query, int? Offset, int? Limit);
+    public async Task<List<SearchProductsRow>> SearchProducts(SearchProductsArgs args)
+    {
+        if (this.Transaction == null)
+        {
+            using (var connection = NpgsqlDataSource.Create(ConnectionString!))
+            {
+                using (var command = connection.CreateCommand(SearchProductsSql))
+                {
+                    command.Parameters.AddWithValue("@query", args.Query);
+                    command.Parameters.AddWithValue("@offset", args.Offset ?? (object)DBNull.Value);
+                    command.Parameters.AddWithValue("@limit", args.Limit ?? (object)DBNull.Value);
+                    using (var reader = await command.ExecuteReaderAsync())
+                    {
+                        var result = new List<SearchProductsRow>();
+                        while (await reader.ReadAsync())
+                            result.Add(new SearchProductsRow { Product = new Product { Id = reader.GetFieldValue<Guid>(0), Sku = reader.GetString(1), Name = reader.GetString(2), Brand = reader.IsDBNull(3) ? null : reader.GetString(3), StoreType = reader.GetInt16(4), ImageUrl = reader.IsDBNull(5) ? null : reader.GetString(5), MaxQuantity = reader.GetDecimal(6), IsDeleted = reader.GetBoolean(7), CreatedUtc = reader.GetDateTime(8), LastUpdatedUtc = reader.GetDateTime(9), SearchVector = reader.IsDBNull(10) ? null : reader.GetFieldValue<NpgsqlTsVector>(10) } });
+                        return result;
+                    }
+                }
+            }
+        }
+
+        if (this.Transaction?.Connection == null || this.Transaction?.Connection.State != System.Data.ConnectionState.Open)
+            throw new InvalidOperationException("Transaction is provided, but its connection is null.");
+        using (var command = this.Transaction.Connection.CreateCommand())
+        {
+            command.CommandText = SearchProductsSql;
+            command.Transaction = this.Transaction;
+            command.Parameters.AddWithValue("@query", args.Query);
+            command.Parameters.AddWithValue("@offset", args.Offset ?? (object)DBNull.Value);
+            command.Parameters.AddWithValue("@limit", args.Limit ?? (object)DBNull.Value);
+            using (var reader = await command.ExecuteReaderAsync())
+            {
+                var result = new List<SearchProductsRow>();
+                while (await reader.ReadAsync())
+                    result.Add(new SearchProductsRow { Product = new Product { Id = reader.GetFieldValue<Guid>(0), Sku = reader.GetString(1), Name = reader.GetString(2), Brand = reader.IsDBNull(3) ? null : reader.GetString(3), StoreType = reader.GetInt16(4), ImageUrl = reader.IsDBNull(5) ? null : reader.GetString(5), MaxQuantity = reader.GetDecimal(6), IsDeleted = reader.GetBoolean(7), CreatedUtc = reader.GetDateTime(8), LastUpdatedUtc = reader.GetDateTime(9), SearchVector = reader.IsDBNull(10) ? null : reader.GetFieldValue<NpgsqlTsVector>(10) } });
+                return result;
+            }
         }
     }
 }

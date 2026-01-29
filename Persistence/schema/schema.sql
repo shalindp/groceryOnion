@@ -1,6 +1,8 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
+drop table if exists Product_Price;
 drop table if exists Product;
+
 create table Product
 (
     id               UUID PRIMARY KEY        DEFAULT uuid_generate_v4(),
@@ -15,7 +17,6 @@ create table Product
     last_updated_utc TIMESTAMPTZ    not null default now()
 );
 
-drop table if exists Product_Price;
 CREATE TABLE Product_Price
 (
     product_id      UUID           NOT NULL
@@ -37,3 +38,22 @@ CREATE TABLE Product_Price
         PRIMARY KEY (product_id, product_sku, store_type, region_id)
 );
 
+ALTER TABLE Product
+    ADD COLUMN search_vector tsvector;
+
+-- populate it for existing rows
+UPDATE Product
+SET search_vector = to_tsvector('english', coalesce(name, '') || ' ' || coalesce(brand, '') || ' ' || coalesce(sku, ''));
+
+CREATE INDEX idx_product_search_vector ON Product USING GIN(search_vector);
+
+CREATE FUNCTION product_search_vector_trigger() RETURNS trigger AS $$
+BEGIN
+    NEW.search_vector :=
+            to_tsvector('english', coalesce(NEW.name, '') || ' ' || coalesce(NEW.brand, '') || ' ' || coalesce(NEW.sku, ''));
+    RETURN NEW;
+END
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER tsvectorupdate BEFORE INSERT OR UPDATE
+    ON Product FOR EACH ROW EXECUTE FUNCTION product_search_vector_trigger();

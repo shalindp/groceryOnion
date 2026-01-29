@@ -1,6 +1,7 @@
 using Application.Actions;
 using Application.Models;
 using Microsoft.AspNetCore.Mvc;
+using Persistence;
 
 namespace Presentation.Controllers;
 
@@ -38,5 +39,23 @@ public class ProductController : ControllerBase
             [1225718, 3496448, 861615, 2810973, 1050811, 1155526]);
 
         return true;
+    }
+
+    [HttpGet("searchV2", Name = nameof(SearchProductsV2))]
+    public async Task<List<Product?>> SearchProductsV2([FromQuery] string term, int itemsPerPage, int pageNumber)
+    {
+        return await _woolworthsProductAction.SearchV2(term, itemsPerPage, pageNumber);
+    }
+
+    public record ProductPriceByRegionRequest(string Sku, int RegionId);
+
+    public record XX(IList<ProductPriceByRegionRequest> Requests);
+    
+
+    [HttpPost("pricing/by/region", Name = nameof(ProductPriceByRegion))]
+    public async Task<List<Product?>> ProductPriceByRegion()
+    {
+        await _woolworthsProductAction.GetPricingForProductBySkuAndRegion();
+        return null;
     }
 }

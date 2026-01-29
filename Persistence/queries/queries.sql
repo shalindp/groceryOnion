@@ -24,3 +24,12 @@ where sku = @sku and store_type = @store_type;
 -- name: CreateProductPrice :exec
 insert into Product_Price (product_id, product_sku, store_type, region_id, original_price, sale_price, multi_buy_price)
 values (@product_id, @product_sku, @store_type, @region_id, @original_price, @sale_price, @multi_buy_price);
+
+-- name: SearchProducts :many
+SELECT sqlc.embed(Product)
+FROM Product
+WHERE is_deleted = false
+  AND search_vector @@ plainto_tsquery('english', @query)
+ORDER BY ts_rank_cd(search_vector, plainto_tsquery('english', @query)) DESC, id asc 
+LIMIT sqlc.narg('limit')::int OFFSET sqlc.narg('offset')::int;
+

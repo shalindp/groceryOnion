@@ -11,6 +11,10 @@ public interface IWoolworthsProductAction
     public Task<IList<Categoery>> GetAllCategoriesAsync();
 
     public Task<IList<Product>> SearchProductsAsync(string searchTerm, int[] woolworthRegionIds);
+
+    public Task<List<Product?>> SearchV2(string term, int itemsPerPage, int pageNumber);
+
+    public Task GetPricingForProductBySkuAndRegion();
 }
 
 public class WoolworthsProductAction : IWoolworthsProductAction
@@ -53,7 +57,7 @@ public class WoolworthsProductAction : IWoolworthsProductAction
 
     private record PriceResponse(double OriginalPrice, double SalePrice);
 
-    private record ProductTagResponse(MultiBuyResponse MultiBuy);
+    private record ProductTagResponse(MultiBuyResponse? MultiBuy);
 
     private record MultiBuyResponse(double Quantity, double MultiCupValue);
 
@@ -91,12 +95,80 @@ public class WoolworthsProductAction : IWoolworthsProductAction
                     ImageUrl = c.Images.Big,
                     MaxQuantity = (int)c.Quantity.Max,
                 }));
-
-                // Thread.Sleep(200);
             }
         }
 
         return allProducts;
+    }
+
+    public async Task<List<Product?>> SearchV2(string term, int itemsPerPage, int pageNumber)
+    {
+        var x = await _dbContext.Queries.SearchProducts(
+            new QueriesSql.SearchProductsArgs(term, itemsPerPage * pageNumber, itemsPerPage));
+        return x.Select(c => c.Product).ToList();
+    }
+
+    private record ProductPriceResponse(PriceResponse Price, QuantityResponse Quantity);
+
+    public async Task GetPricingForProductBySkuAndRegion()
+    {
+        int[] finalSkus = { 223979, 224833, 211707, 220954, 215163, 524362, 291056, 87143, 282793, 6043669 };
+        int[] finalAreaIds = { 3496448, 861615, 1155526, 2447192, 1497678 };
+
+        var allPriceTasks = new List<Task<HttpResponseWrapper<ProductPriceResponse>?>>();
+        var url = (int sku) => $"https://www.woolworths.co.nz/api/v1/products/{sku}";
+
+        // Limit concurrency for region sessions
+        var regionSemaphore = new SemaphoreSlim(3); // max 3 regions at a time
+        var regionTasks = finalAreaIds.Select(async regionId =>
+        {
+            await regionSemaphore.WaitAsync();
+            try
+            {
+                var regionSession = await _woolworthsRegionAction.CreateSessionWithRegionAsync(regionId);
+
+                var cookies = new Dictionary<string, string>
+                {
+                    ["ASP.NET_SessionId"] = regionSession.SessionId,
+                    ["aga"] = regionSession.Aga
+                };
+
+                // Limit concurrency for SKU requests per region
+                var skuSemaphore = new SemaphoreSlim(5); // max 5 SKU requests at a time
+                var skuTasks = finalSkus.Select(async sku =>
+                {
+                    await skuSemaphore.WaitAsync();
+                    try
+                    {
+                        return await _httpHelper.GetAsync<ProductPriceResponse>(
+                            url(sku),
+                            headers: Headers.WoolworthsDefaultHeaders,
+                            cookies: cookies
+                        );
+                    }
+                    finally
+                    {
+                        skuSemaphore.Release();
+                    }
+                });
+
+                var results = await Task.WhenAll(skuTasks);
+                lock (allPriceTasks)
+                {
+                    allPriceTasks.AddRange(results.Select(r => Task.FromResult(r)));
+                }
+            }
+            finally
+            {
+                regionSemaphore.Release();
+            }
+        });
+
+        await Task.WhenAll(regionTasks);
+
+        // Wait for all tasks (already included in allPriceTasks)
+        var responses = await Task.WhenAll(allPriceTasks.Select(t => t!));
+        Console.WriteLine($"@> {responses.Length}");
     }
 
     public async Task SyncProductsAsync()
