@@ -27,7 +27,8 @@ public class ProductController : ControllerBase
     [HttpGet("sync/woolworths", Name = nameof(SyncWoolworths))]
     public async Task<bool> SyncWoolworths()
     {
-        await _woolworthsProductAction.SyncProductsAsync();
+        // await _woolworthsProductAction.SyncProductsAsync();
+        await _woolworthsProductAction.SyncAllStoresAsync();
 
         return true;
     }

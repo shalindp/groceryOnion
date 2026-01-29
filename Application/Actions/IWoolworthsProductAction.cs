@@ -8,6 +8,9 @@ namespace Application.Actions;
 public interface IWoolworthsProductAction
 {
     public Task SyncProductsAsync();
+
+    public Task SyncAllStoresAsync();
+
     public Task<IList<Categoery>> GetAllCategoriesAsync();
 
     public Task<IList<Product>> SearchProductsAsync(string searchTerm, int[] woolworthRegionIds);
@@ -37,7 +40,7 @@ public class WoolworthsProductAction : IWoolworthsProductAction
 
     private record FulfillmentResponse(string Address);
 
-    private record ProductsResponse(IList<ItemResponse> Items);
+    private record ProductsResponse(IList<ItemResponse> Items, int TotalItems);
 
     private record ItemResponse(
         string Type,
@@ -60,6 +63,60 @@ public class WoolworthsProductAction : IWoolworthsProductAction
     private record ProductTagResponse(MultiBuyResponse? MultiBuy);
 
     private record MultiBuyResponse(double Quantity, double MultiCupValue);
+
+    public async Task SyncAllStoresAsync()
+    {
+        const int perPage = 48;
+        var allProducts = new List<ItemResponse>();
+
+        var productsByCategoryUrlFn = (string category, int page) =>
+            $"https://www.woolworths.co.nz/api/v1/products?dasFilter=Department;;{category};false&target=browse&inStockProductsOnly=false&size={perPage}&page={page}";
+
+        var regions = await _woolworthsRegionAction.GetRegionsAsync();
+        var categories = await GetAllCategoriesAsync();
+
+        foreach (var region in regions)
+        {
+            var session =
+                await _woolworthsRegionAction.CreateSessionWithRegionAsync(regionId: region.Id);
+
+            var sessionCookie = new Dictionary<string, string>
+            {
+                ["ASP.NET_SessionId"] = session.SessionId,
+                ["aga"] = session.Aga
+            };
+
+            foreach (var category in categories)
+            {
+                var initialUrl = productsByCategoryUrlFn(category.Url, 1);
+                var initialCategoryResponse = await _httpHelper.GetAsync<AllProductsResponse>(initialUrl,
+                    headers: Headers.WoolworthsDefaultHeaders, cookies: sessionCookie
+                );
+
+
+                var totalProductsForCategory = initialCategoryResponse.Body.Products.TotalItems;
+                double x = (double)totalProductsForCategory / perPage;
+                int maxPages = (x % perPage == 0) ? (int)x : (int)x + 1;
+                allProducts.AddRange(initialCategoryResponse.Body.Products.Items);
+                
+                Console.WriteLine($"{region.StoreName} | region: {category.Name} | products count: {totalProductsForCategory}");
+
+                for (var page = 2; page <= maxPages; page++)
+                {
+                    Console.WriteLine($"        -> Page: {page}/{maxPages}");
+                    var url = productsByCategoryUrlFn(category.Url, page);
+                    var categoryResponse = await _httpHelper.GetAsync<AllProductsResponse>(url,
+                        headers: Headers.WoolworthsDefaultHeaders, cookies: sessionCookie
+                    );
+
+                    var products = categoryResponse.Body.Products.Items;
+                    allProducts.AddRange(products);
+                }
+            }
+        }
+
+        var t = allProducts;
+    }
 
     private async Task<IList<Product>> GetAllProductsAsync()
     {

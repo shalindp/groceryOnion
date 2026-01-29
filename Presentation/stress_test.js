@@ -8,5 +8,6 @@ export let options = {
 }
 
 export default ()=>{
-    http.post("http://localhost:5112/product/pricing/by/region")
+    // http.post("http://localhost:5112/product/pricing/by/region")
+    http.get("http://localhost:5112/product/searchV2?term=milk&itemsPerPage=10&pageNumber=1")
 }
