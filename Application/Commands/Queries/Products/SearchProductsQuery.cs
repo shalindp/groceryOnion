@@ -1,12 +1,13 @@
-﻿using Application.Actions;
+﻿using Application.Actions.Products;
+using Application.Actions.Regions;
 using Application.Interfaces;
 using Application.Models;
 using Persistence;
 
-namespace Application.Commands.Products;
+namespace Application.Commands.Queries.Products;
 
 public record SearchProductsQueryRequest(Context Context, string SearchTerm, int[] WoolworthAreaIds);
-public record SearchProductsQueryResult(IList<Product> Products);
+public record SearchProductsQueryResult(IList<StoreProduct> StoreProducts);
 
 public class SearchProductsQuery: IQuery<Result<SearchProductsQueryResult>, SearchProductsQueryRequest>
 {

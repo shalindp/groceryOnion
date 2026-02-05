@@ -29,6 +29,7 @@ PersistenceModule.AddToService(builder.Services);
 ApplicationModule.AddToService(builder.Services);
 
 builder.Services.AddSingleton<IProductMapper, ProductMapper>();
+builder.Services.AddSingleton<IRegionMapper, RegionMapper>();
 
 
 var app = builder.Build();

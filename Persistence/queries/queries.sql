@@ -1,35 +1,30 @@
--- name: CreateProduct :one
-insert into Product (name, brand, sku, store_type, image_url, max_quantity)
-values (@name, @brand, @sku, @store_type, @image_url, @max_quanitity)
-returning sqlc.embed(Product);
-
 -- name: CreateProducts :copyfrom
-insert into Product (name, brand, sku, store_type, image_url, max_quantity)
-values (@name, @brand, @sku, @store_type, @image_url, @max_quantity);
-
--- name: GetWoolworthsProducts :many
-select *
-from product
-where sku = any(@skus::varchar(255)[]) and store_type = 0 and is_deleted = false;
-
--- name: UpdateProduct :exec
-update product set
-    name = @name,
-    brand = @brand,
-    image_url = @image_url,
-    max_quantity = @max_quantity,
-    last_updated_utc = now()
-where sku = @sku and store_type = @store_type;
-
--- name: CreateProductPrice :exec
-insert into Product_Price (product_id, product_sku, store_type, region_id, original_price, sale_price, multi_buy_price)
-values (@product_id, @product_sku, @store_type, @region_id, @original_price, @sale_price, @multi_buy_price);
+insert into store_product (store_name, barcode, name, brand, image_url, max_quantity, image_url, unit_and_size)
+values (@store_name, @barcode, @name, @brand, @image_url, @max_quantity, @image_url, @unit_and_size);
 
 -- name: SearchProducts :many
-SELECT sqlc.embed(Product)
-FROM Product
+SELECT sqlc.embed(canonical_product)
+FROM canonical_product
 WHERE is_deleted = false
   AND search_vector @@ plainto_tsquery('english', @query)
-ORDER BY ts_rank_cd(search_vector, plainto_tsquery('english', @query)) DESC, id asc 
+ORDER BY ts_rank_cd(search_vector, plainto_tsquery('english', @query)) DESC, canonical_product_id asc
 LIMIT sqlc.narg('limit')::int OFFSET sqlc.narg('offset')::int;
 
+-- name: GetStoreProducts :many
+select sqlc.embed(store_product)
+from store_product
+where barcode = any(@skus::varchar(255)[]) and store_name = @store_name and is_deleted = false;
+
+-- name: GetStoreProductsByStore :many
+select sqlc.embed(store_product)
+from store_product
+where store_name = @store_name and is_deleted = false;
+
+-- name: UpdateStoreProduct :exec
+update store_product set
+                   name = @name,
+                   brand = @brand,
+                   image_url = @image_url,
+                   max_quantity = @max_quantity,
+                   last_updated_utc = now()
+where barcode = @barcode and store_name = @store_name;

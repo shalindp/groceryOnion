@@ -1,0 +1,9 @@
+﻿generatorName: dart
+inputSpec: "http://192.168.0.100:5112/swagger/v1/swagger.json"
+outputDir: "dart_client"
+
+additionalProperties:
+  pubName: grocery_api
+  pubVersion: 1.0.0
+  useEnumExtension: true
+  nullableFields: true

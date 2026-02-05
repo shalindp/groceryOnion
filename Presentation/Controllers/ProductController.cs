@@ -1,7 +1,10 @@
-using Application.Actions;
+using Application.Actions.Products;
+using Application.Commands.Products;
+using Application.Enums;
 using Application.Models;
 using Microsoft.AspNetCore.Mvc;
-using Persistence;
+using Presentation.Mappers;
+using Presentation.Responses;
 
 namespace Presentation.Controllers;
 
@@ -10,10 +13,17 @@ namespace Presentation.Controllers;
 public class ProductController : ControllerBase
 {
     private readonly IWoolworthsProductAction _woolworthsProductAction;
+    private readonly IProductMapper _mapper;
+    private readonly SyncStoreProductsCommand _syncStoreProductsCommand;
+    private readonly SyncCanonicalProductsCommand _syncCanonicalProductsCommand;
 
-    public ProductController(IWoolworthsProductAction woolworthsProductAction)
+    public ProductController(IWoolworthsProductAction woolworthsProductAction, IProductMapper mapper,
+        SyncStoreProductsCommand syncStoreProductsCommand, SyncCanonicalProductsCommand syncCanonicalProductsCommand)
     {
         _woolworthsProductAction = woolworthsProductAction;
+        _mapper = mapper;
+        _syncStoreProductsCommand = syncStoreProductsCommand;
+        _syncCanonicalProductsCommand = syncCanonicalProductsCommand;
     }
 
     [HttpGet("categories", Name = nameof(GetCategories))]
@@ -24,39 +34,28 @@ public class ProductController : ControllerBase
         return result;
     }
 
-    [HttpGet("sync/woolworths", Name = nameof(SyncWoolworths))]
-    public async Task<bool> SyncWoolworths()
+    [HttpPost("sync", Name = nameof(SyncWoolworths))]
+    public async Task<bool> SyncWoolworths([FromBody] StoreName[]? stores)
     {
-        // await _woolworthsProductAction.SyncProductsAsync();
-        await _woolworthsProductAction.SyncAllStoresAsync();
+        var result = await _syncStoreProductsCommand.SendAsync(
+            new SyncStoreProductsRequest(stores)
+        );
 
-        return true;
+        return result;
     }
-
-    [HttpGet("search{regionId:int}", Name = nameof(SearchProducts))]
-    public async Task<bool> SearchProducts(int regionId)
-    {
-        await _woolworthsProductAction.SearchProductsAsync("sweet",
-            [1225718, 3496448, 861615, 2810973, 1050811, 1155526]);
-
-        return true;
-    }
-
-    [HttpGet("searchV2", Name = nameof(SearchProductsV2))]
-    public async Task<List<Product?>> SearchProductsV2([FromQuery] string term, int itemsPerPage, int pageNumber)
-    {
-        return await _woolworthsProductAction.SearchV2(term, itemsPerPage, pageNumber);
-    }
-
-    public record ProductPriceByRegionRequest(string Sku, int RegionId);
-
-    public record XX(IList<ProductPriceByRegionRequest> Requests);
     
-
-    [HttpPost("pricing/by/region", Name = nameof(ProductPriceByRegion))]
-    public async Task<List<Product?>> ProductPriceByRegion()
+    [HttpPost("sync/canonical", Name = nameof(SyncCanonicalProducts))]
+    public async Task<bool> SyncCanonicalProducts()
     {
-        await _woolworthsProductAction.GetPricingForProductBySkuAndRegion();
-        return null;
+        var result = await _syncCanonicalProductsCommand.SendAsync();
+
+        return result;
+    }
+
+    [HttpGet("search", Name = nameof(SearchProducts))]
+    public async Task<IList<ProductResponse>> SearchProducts([FromQuery] string term, int limit, int skip)
+    {
+        var result = await _woolworthsProductAction.SearchProductsAsync(term, limit, skip);
+        return _mapper.Map(result);
     }
 }
