@@ -182,20 +182,14 @@ class ApiClient {
           return valueString == 'true' || valueString == '1';
         case 'DateTime':
           return value is DateTime ? value : DateTime.tryParse(value);
+        case 'CanonicalProduct':
+          return CanonicalProduct.fromJson(value);
         case 'Categoery':
           return Categoery.fromJson(value);
         case 'CreateSessionWithRegionId':
           return CreateSessionWithRegionId.fromJson(value);
         case 'CreateSessionWithRegionResponse':
           return CreateSessionWithRegionResponse.fromJson(value);
-        case 'Lexeme':
-          return Lexeme.fromJson(value);
-        case 'PricingUrlResponse':
-          return PricingUrlResponse.fromJson(value);
-        case 'Product':
-          return Product.fromJson(value);
-        case 'ProductResponse':
-          return ProductResponse.fromJson(value);
         case 'StoreName':
           return StoreNameTypeTransformer().decode(value);
         case 'WoolworthsGetRegionsResult':

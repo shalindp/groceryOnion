@@ -1,5 +1,6 @@
 using Application.Actions.Products;
 using Application.Commands.Products;
+using Application.Commands.Queries.Products;
 using Application.Enums;
 using Application.Models;
 using Microsoft.AspNetCore.Mvc;
@@ -16,14 +17,17 @@ public class ProductController : ControllerBase
     private readonly IProductMapper _mapper;
     private readonly SyncStoreProductsCommand _syncStoreProductsCommand;
     private readonly SyncCanonicalProductsCommand _syncCanonicalProductsCommand;
+    private readonly SearchProductsQuery _searchProductsQuery;
 
     public ProductController(IWoolworthsProductAction woolworthsProductAction, IProductMapper mapper,
-        SyncStoreProductsCommand syncStoreProductsCommand, SyncCanonicalProductsCommand syncCanonicalProductsCommand)
+        SyncStoreProductsCommand syncStoreProductsCommand, SyncCanonicalProductsCommand syncCanonicalProductsCommand,
+        SearchProductsQuery searchProductsQuery)
     {
         _woolworthsProductAction = woolworthsProductAction;
         _mapper = mapper;
         _syncStoreProductsCommand = syncStoreProductsCommand;
         _syncCanonicalProductsCommand = syncCanonicalProductsCommand;
+        _searchProductsQuery = searchProductsQuery;
     }
 
     [HttpGet("categories", Name = nameof(GetCategories))]
@@ -43,7 +47,7 @@ public class ProductController : ControllerBase
 
         return result;
     }
-    
+
     [HttpPost("sync/canonical", Name = nameof(SyncCanonicalProducts))]
     public async Task<bool> SyncCanonicalProducts()
     {
@@ -55,7 +59,7 @@ public class ProductController : ControllerBase
     [HttpGet("search", Name = nameof(SearchProducts))]
     public async Task<IList<ProductResponse>> SearchProducts([FromQuery] string term, int limit, int skip)
     {
-        var result = await _woolworthsProductAction.SearchProductsAsync(term, limit, skip);
-        return _mapper.Map(result);
+        var result = await _searchProductsQuery.SendAsync(new SearchProductsQueryRequest(term, limit, skip));
+        return _mapper.Map(result.Data!.Products);
     }
 }

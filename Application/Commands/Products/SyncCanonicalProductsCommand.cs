@@ -6,16 +6,16 @@ namespace Application.Commands.Products;
 public class SyncCanonicalProductsCommand : ICommand<bool>
 {
 
-    private readonly IProductsAction _productsAction;
+    private readonly ICanonicalProductSyncAction _canonicalProductSyncAction;
 
-    public SyncCanonicalProductsCommand(IProductsAction productsAction)
+    public SyncCanonicalProductsCommand(ICanonicalProductSyncAction canonicalProductSyncAction)
     {
-        _productsAction = productsAction;
+        _canonicalProductSyncAction = canonicalProductSyncAction;
     }
 
     public async Task<bool> SendAsync()
     {
-        await _productsAction.SyncToCanonicalProducts();
+        await _canonicalProductSyncAction.SyncToCanonicalProducts();
         return true;
     }
 }

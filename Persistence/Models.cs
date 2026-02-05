@@ -4,6 +4,6 @@ using System.Collections.Generic;
 using System.Linq;
 
 namespace Persistence;
-public readonly record struct CanonicalProduct(Guid CanonicalProductId, string Barcode, string Brand, string Name, double SizeValue, string SizeUnit, bool IsDeleted, DateTime CreatedUtc, DateTime LastUpdatedUtc);
-public readonly record struct StoreProduct(Guid StoreProductId, string StoreName, string Barcode, Guid? CanonicalProductId, string Name, string? Brand, string ImageUrl, string? UnitAndSize, decimal MaxQuantity, bool IsDeleted, DateTime CreatedUtc, DateTime LastUpdatedUtc);
-public readonly record struct CanonicalStoreProduct(Guid CanonicalProductId, Guid StoreProductId);
+public readonly record struct Product(Guid ProductId, string Barcode, string Brand, string Name, string ImageUrl, string? UnitAndSize, double? MaxQuantity, bool IsDeleted, DateTime CreatedUtc, DateTime LastUpdatedUtc);
+public readonly record struct StoreProduct(Guid StoreProductId, string StoreName, string Barcode, string Name, string? Brand, string ImageUrl, string? UnitAndSize, double? MaxQuantity, bool IsDeleted, DateTime CreatedUtc, DateTime LastUpdatedUtc);
+public readonly record struct ProductStoreProduct(Guid ProductId, Guid StoreProductId);

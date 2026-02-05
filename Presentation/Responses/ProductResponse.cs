@@ -5,12 +5,14 @@ namespace Presentation.Responses;
 
 public record ProductResponse
 {
-    [Required] public string Sku { get; set; }
+    [Required] public Guid ProductId { get; set; }
+    [Required] public string Barcode { get; set; }
     [Required] public string Name { get; set; }
     [Required] public string Brand { get; set; }
-    [Required] public short StoreType { get; set; }
+    [Required] public StoreName StoreType { get; set; }
     [Required] public string ImageUrl { get; set; }
-    [Required] public decimal MaxQuantity { get; set; }
+    [Required] public float MaxQuantity { get; set; }
+    
     [Required] public IList<PricingUrlResponse> PricingUrls { get; set; }
 }
 

@@ -17,4 +17,18 @@ public static class StoreNameExtensions
             StoreName.Woolworths => "woolworths",
             _ => throw new Exception("Invalid store name")
         };
+    
+    public static StoreName ToStoreNameEnum(this string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            throw new ArgumentException("Store name value cannot be null or empty", nameof(value));
+
+        return value.ToLower() switch
+        {
+            "paknsave" => StoreName.PaknSave,
+            "newworld" => StoreName.NewWorld,
+            "woolworths" => StoreName.Woolworths,
+            _ => throw new ArgumentException($"Invalid store name: {value}", nameof(value))
+        };
+    }
 }

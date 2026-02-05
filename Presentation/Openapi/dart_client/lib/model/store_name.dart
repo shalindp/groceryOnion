@@ -25,11 +25,13 @@ class StoreName {
 
   static const number0 = StoreName._(0);
   static const number1 = StoreName._(1);
+  static const number2 = StoreName._(2);
 
   /// List of all possible values in this [enum][StoreName].
   static const values = <StoreName>[
     number0,
     number1,
+    number2,
   ];
 
   static StoreName? fromJson(dynamic value) => StoreNameTypeTransformer().decode(value);
@@ -70,6 +72,7 @@ class StoreNameTypeTransformer {
       switch (data) {
         case 0: return StoreName.number0;
         case 1: return StoreName.number1;
+        case 2: return StoreName.number2;
         default:
           if (!allowNull) {
             throw ArgumentError('Unknown enum value to decode: $data');

@@ -12,7 +12,7 @@ public interface IWoolworthsProductAction
 
     public Task<IList<Categoery>> GetAllCategoriesAsync();
 
-    public Task<IList<ProductDto>> SearchProductsAsync(string term, int limit, int skip);
+    // public Task<IList<ProductDto>> SearchProductsAsync(string term, int limit, int skip);
 }
 
 public class WoolworthsProductAction : IWoolworthsProductAction
@@ -123,13 +123,13 @@ public class WoolworthsProductAction : IWoolworthsProductAction
         }
     }
 
-    public async Task<IList<ProductDto>> SearchProductsAsync(string term, int limit, int skip)
-    {
-        var result = await _dbContext.Queries.SearchProducts(
-            new QueriesSql.SearchProductsArgs(term, skip, limit));
-
-        return result.Select(c => ProductDto.Map(c.CanonicalProduct!.Value!)).ToList();
-    }
+    // public async Task<IList<ProductDto>> SearchProductsAsync(string term, int limit, int skip)
+    // {
+    //     var result = await _dbContext.Queries.SearchProducts(
+    //         new QueriesSql.SearchProductsArgs(term, skip, limit));
+    //
+    //     return result.Select(c => ProductDto.Map(c.CanonicalProduct!.Value!)).ToList();
+    // }
 
     public async Task SyncProductsAsync()
     {

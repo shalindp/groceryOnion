@@ -10,9 +10,9 @@ All URIs are relative to *http://localhost*
 Method | HTTP request | Description
 ------------- | ------------- | -------------
 [**getCategories**](ProductApi.md#getcategories) | **GET** /Product/categories | 
-[**productPriceByRegion**](ProductApi.md#productpricebyregion) | **POST** /Product/pricing/by/region | 
 [**searchProducts**](ProductApi.md#searchproducts) | **GET** /Product/search | 
-[**syncWoolworths**](ProductApi.md#syncwoolworths) | **GET** /Product/sync/woolworths | 
+[**syncCanonicalProducts**](ProductApi.md#synccanonicalproducts) | **POST** /Product/sync/canonical | 
+[**syncWoolworths**](ProductApi.md#syncwoolworths) | **POST** /Product/sync | 
 
 
 # **getCategories**
@@ -52,45 +52,8 @@ No authorization required
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
-# **productPriceByRegion**
-> List<Product> productPriceByRegion()
-
-
-
-### Example
-```dart
-import 'package:grocery_api/api.dart';
-
-final api_instance = ProductApi();
-
-try {
-    final result = api_instance.productPriceByRegion();
-    print(result);
-} catch (e) {
-    print('Exception when calling ProductApi->productPriceByRegion: $e\n');
-}
-```
-
-### Parameters
-This endpoint does not need any parameter.
-
-### Return type
-
-[**List<Product>**](Product.md)
-
-### Authorization
-
-No authorization required
-
-### HTTP request headers
-
- - **Content-Type**: Not defined
- - **Accept**: text/plain, application/json, text/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
-
 # **searchProducts**
-> List<ProductResponse> searchProducts(term, limit, skip)
+> List<CanonicalProduct> searchProducts(term, limit, skip)
 
 
 
@@ -121,7 +84,7 @@ Name | Type | Description  | Notes
 
 ### Return type
 
-[**List<ProductResponse>**](ProductResponse.md)
+[**List<CanonicalProduct>**](CanonicalProduct.md)
 
 ### Authorization
 
@@ -134,8 +97,8 @@ No authorization required
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
-# **syncWoolworths**
-> bool syncWoolworths()
+# **syncCanonicalProducts**
+> bool syncCanonicalProducts()
 
 
 
@@ -146,10 +109,10 @@ import 'package:grocery_api/api.dart';
 final api_instance = ProductApi();
 
 try {
-    final result = api_instance.syncWoolworths();
+    final result = api_instance.syncCanonicalProducts();
     print(result);
 } catch (e) {
-    print('Exception when calling ProductApi->syncWoolworths: $e\n');
+    print('Exception when calling ProductApi->syncCanonicalProducts: $e\n');
 }
 ```
 
@@ -167,6 +130,47 @@ No authorization required
 ### HTTP request headers
 
  - **Content-Type**: Not defined
+ - **Accept**: text/plain, application/json, text/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **syncWoolworths**
+> bool syncWoolworths(storeName)
+
+
+
+### Example
+```dart
+import 'package:grocery_api/api.dart';
+
+final api_instance = ProductApi();
+final storeName = [List<StoreName>()]; // List<StoreName> | 
+
+try {
+    final result = api_instance.syncWoolworths(storeName);
+    print(result);
+} catch (e) {
+    print('Exception when calling ProductApi->syncWoolworths: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **storeName** | [**List<StoreName>**](StoreName.md)|  | [optional] 
+
+### Return type
+
+**bool**
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: application/json, text/json, application/*+json
  - **Accept**: text/plain, application/json, text/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)

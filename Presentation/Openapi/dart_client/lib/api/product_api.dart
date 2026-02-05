@@ -60,50 +60,6 @@ class ProductApi {
     return null;
   }
 
-  /// Performs an HTTP 'POST /Product/pricing/by/region' operation and returns the [Response].
-  Future<Response> productPriceByRegionWithHttpInfo() async {
-    // ignore: prefer_const_declarations
-    final path = r'/Product/pricing/by/region';
-
-    // ignore: prefer_final_locals
-    Object? postBody;
-
-    final queryParams = <QueryParam>[];
-    final headerParams = <String, String>{};
-    final formParams = <String, String>{};
-
-    const contentTypes = <String>[];
-
-
-    return apiClient.invokeAPI(
-      path,
-      'POST',
-      queryParams,
-      postBody,
-      headerParams,
-      formParams,
-      contentTypes.isEmpty ? null : contentTypes.first,
-    );
-  }
-
-  Future<List<Product>?> productPriceByRegion() async {
-    final response = await productPriceByRegionWithHttpInfo();
-    if (response.statusCode >= HttpStatus.badRequest) {
-      throw ApiException(response.statusCode, await _decodeBodyBytes(response));
-    }
-    // When a remote server returns no body with a status of 204, we shall not decode it.
-    // At the time of writing this, `dart:convert` will throw an "Unexpected end of input"
-    // FormatException when trying to decode an empty string.
-    if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
-      final responseBody = await _decodeBodyBytes(response);
-      return (await apiClient.deserializeAsync(responseBody, 'List<Product>') as List)
-        .cast<Product>()
-        .toList(growable: false);
-
-    }
-    return null;
-  }
-
   /// Performs an HTTP 'GET /Product/search' operation and returns the [Response].
   /// Parameters:
   ///
@@ -154,7 +110,7 @@ class ProductApi {
   /// * [int] limit:
   ///
   /// * [int] skip:
-  Future<List<ProductResponse>?> searchProducts({ String? term, int? limit, int? skip, }) async {
+  Future<List<CanonicalProduct>?> searchProducts({ String? term, int? limit, int? skip, }) async {
     final response = await searchProductsWithHttpInfo( term: term, limit: limit, skip: skip, );
     if (response.statusCode >= HttpStatus.badRequest) {
       throw ApiException(response.statusCode, await _decodeBodyBytes(response));
@@ -164,18 +120,18 @@ class ProductApi {
     // FormatException when trying to decode an empty string.
     if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
       final responseBody = await _decodeBodyBytes(response);
-      return (await apiClient.deserializeAsync(responseBody, 'List<ProductResponse>') as List)
-        .cast<ProductResponse>()
+      return (await apiClient.deserializeAsync(responseBody, 'List<CanonicalProduct>') as List)
+        .cast<CanonicalProduct>()
         .toList(growable: false);
 
     }
     return null;
   }
 
-  /// Performs an HTTP 'GET /Product/sync/woolworths' operation and returns the [Response].
-  Future<Response> syncWoolworthsWithHttpInfo() async {
+  /// Performs an HTTP 'POST /Product/sync/canonical' operation and returns the [Response].
+  Future<Response> syncCanonicalProductsWithHttpInfo() async {
     // ignore: prefer_const_declarations
-    final path = r'/Product/sync/woolworths';
+    final path = r'/Product/sync/canonical';
 
     // ignore: prefer_final_locals
     Object? postBody;
@@ -189,7 +145,7 @@ class ProductApi {
 
     return apiClient.invokeAPI(
       path,
-      'GET',
+      'POST',
       queryParams,
       postBody,
       headerParams,
@@ -198,8 +154,55 @@ class ProductApi {
     );
   }
 
-  Future<bool?> syncWoolworths() async {
-    final response = await syncWoolworthsWithHttpInfo();
+  Future<bool?> syncCanonicalProducts() async {
+    final response = await syncCanonicalProductsWithHttpInfo();
+    if (response.statusCode >= HttpStatus.badRequest) {
+      throw ApiException(response.statusCode, await _decodeBodyBytes(response));
+    }
+    // When a remote server returns no body with a status of 204, we shall not decode it.
+    // At the time of writing this, `dart:convert` will throw an "Unexpected end of input"
+    // FormatException when trying to decode an empty string.
+    if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
+      return await apiClient.deserializeAsync(await _decodeBodyBytes(response), 'bool',) as bool;
+    
+    }
+    return null;
+  }
+
+  /// Performs an HTTP 'POST /Product/sync' operation and returns the [Response].
+  /// Parameters:
+  ///
+  /// * [List<StoreName>] storeName:
+  Future<Response> syncWoolworthsWithHttpInfo({ List<StoreName>? storeName, }) async {
+    // ignore: prefer_const_declarations
+    final path = r'/Product/sync';
+
+    // ignore: prefer_final_locals
+    Object? postBody = storeName;
+
+    final queryParams = <QueryParam>[];
+    final headerParams = <String, String>{};
+    final formParams = <String, String>{};
+
+    const contentTypes = <String>['application/json', 'text/json', 'application/*+json'];
+
+
+    return apiClient.invokeAPI(
+      path,
+      'POST',
+      queryParams,
+      postBody,
+      headerParams,
+      formParams,
+      contentTypes.isEmpty ? null : contentTypes.first,
+    );
+  }
+
+  /// Parameters:
+  ///
+  /// * [List<StoreName>] storeName:
+  Future<bool?> syncWoolworths({ List<StoreName>? storeName, }) async {
+    final response = await syncWoolworthsWithHttpInfo( storeName: storeName, );
     if (response.statusCode >= HttpStatus.badRequest) {
       throw ApiException(response.statusCode, await _decodeBodyBytes(response));
     }

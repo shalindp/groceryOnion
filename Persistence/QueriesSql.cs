@@ -36,7 +36,7 @@ public class QueriesSql
     private string? ConnectionString { get; }
 
     private const string CreateProductsSql = "COPY store_product (store_name, barcode, name, brand, image_url, max_quantity, unit_and_size) FROM STDIN (FORMAT BINARY)";
-    public readonly record struct CreateProductsArgs(string StoreName, string Barcode, string Name, string? Brand, string ImageUrl, decimal MaxQuantity, string? UnitAndSize);
+    public readonly record struct CreateProductsArgs(string StoreName, string Barcode, string Name, string? Brand, string ImageUrl, double? MaxQuantity, string? UnitAndSize);
     public async Task CreateProducts(List<CreateProductsArgs> args)
     {
         using (var connection = new NpgsqlConnection(ConnectionString))
@@ -52,7 +52,7 @@ public class QueriesSql
                     await writer.WriteAsync(row.Name);
                     await writer.WriteAsync(row.Brand ?? (object)DBNull.Value);
                     await writer.WriteAsync(row.ImageUrl);
-                    await writer.WriteAsync(row.MaxQuantity);
+                    await writer.WriteAsync(row.MaxQuantity ?? (object)DBNull.Value);
                     await writer.WriteAsync(row.UnitAndSize ?? (object)DBNull.Value);
                 }
 
@@ -63,51 +63,7 @@ public class QueriesSql
         }
     }
 
-    private const string SearchProductsSql = "SELECT canonical_product.canonical_product_id, canonical_product.barcode, canonical_product.brand, canonical_product.name, canonical_product.size_value, canonical_product.size_unit, canonical_product.is_deleted, canonical_product.created_utc, canonical_product.last_updated_utc FROM canonical_product WHERE is_deleted = false AND search_vector @@ plainto_tsquery('english', @query) ORDER BY ts_rank_cd(search_vector, plainto_tsquery('english', @query)) DESC, canonical_product_id asc LIMIT @limit::int OFFSET @offset::int";
-    public readonly record struct SearchProductsRow(CanonicalProduct? CanonicalProduct);
-    public readonly record struct SearchProductsArgs(string Query, int? Offset, int? Limit);
-    public async Task<List<SearchProductsRow>> SearchProducts(SearchProductsArgs args)
-    {
-        if (this.Transaction == null)
-        {
-            using (var connection = NpgsqlDataSource.Create(ConnectionString!))
-            {
-                using (var command = connection.CreateCommand(SearchProductsSql))
-                {
-                    command.Parameters.AddWithValue("@query", args.Query);
-                    command.Parameters.AddWithValue("@offset", args.Offset ?? (object)DBNull.Value);
-                    command.Parameters.AddWithValue("@limit", args.Limit ?? (object)DBNull.Value);
-                    using (var reader = await command.ExecuteReaderAsync())
-                    {
-                        var result = new List<SearchProductsRow>();
-                        while (await reader.ReadAsync())
-                            result.Add(new SearchProductsRow { CanonicalProduct = new CanonicalProduct { CanonicalProductId = reader.GetFieldValue<Guid>(0), Barcode = reader.GetString(1), Brand = reader.GetString(2), Name = reader.GetString(3), SizeValue = reader.GetDouble(4), SizeUnit = reader.GetString(5), IsDeleted = reader.GetBoolean(6), CreatedUtc = reader.GetDateTime(7), LastUpdatedUtc = reader.GetDateTime(8) } });
-                        return result;
-                    }
-                }
-            }
-        }
-
-        if (this.Transaction?.Connection == null || this.Transaction?.Connection.State != System.Data.ConnectionState.Open)
-            throw new InvalidOperationException("Transaction is provided, but its connection is null.");
-        using (var command = this.Transaction.Connection.CreateCommand())
-        {
-            command.CommandText = SearchProductsSql;
-            command.Transaction = this.Transaction;
-            command.Parameters.AddWithValue("@query", args.Query);
-            command.Parameters.AddWithValue("@offset", args.Offset ?? (object)DBNull.Value);
-            command.Parameters.AddWithValue("@limit", args.Limit ?? (object)DBNull.Value);
-            using (var reader = await command.ExecuteReaderAsync())
-            {
-                var result = new List<SearchProductsRow>();
-                while (await reader.ReadAsync())
-                    result.Add(new SearchProductsRow { CanonicalProduct = new CanonicalProduct { CanonicalProductId = reader.GetFieldValue<Guid>(0), Barcode = reader.GetString(1), Brand = reader.GetString(2), Name = reader.GetString(3), SizeValue = reader.GetDouble(4), SizeUnit = reader.GetString(5), IsDeleted = reader.GetBoolean(6), CreatedUtc = reader.GetDateTime(7), LastUpdatedUtc = reader.GetDateTime(8) } });
-                return result;
-            }
-        }
-    }
-
-    private const string GetStoreProductsSql = "select store_product.store_product_id, store_product.store_name, store_product.barcode, store_product.canonical_product_id, store_product.name, store_product.brand, store_product.image_url, store_product.unit_and_size, store_product.max_quantity, store_product.is_deleted, store_product.created_utc, store_product.last_updated_utc from store_product where barcode = any(@skus::varchar(255)[]) and store_name = @store_name and is_deleted = false";
+    private const string GetStoreProductsSql = "select store_product.store_product_id, store_product.store_name, store_product.barcode, store_product.name, store_product.brand, store_product.image_url, store_product.unit_and_size, store_product.max_quantity, store_product.is_deleted, store_product.created_utc, store_product.last_updated_utc from store_product where barcode = any (@skus::varchar(255)[]) and store_name = @store_name and is_deleted = false";
     public readonly record struct GetStoreProductsRow(StoreProduct? StoreProduct);
     public readonly record struct GetStoreProductsArgs(string[] Skus, string StoreName);
     public async Task<List<GetStoreProductsRow>> GetStoreProducts(GetStoreProductsArgs args)
@@ -124,7 +80,7 @@ public class QueriesSql
                     {
                         var result = new List<GetStoreProductsRow>();
                         while (await reader.ReadAsync())
-                            result.Add(new GetStoreProductsRow { StoreProduct = new StoreProduct { StoreProductId = reader.GetFieldValue<Guid>(0), StoreName = reader.GetString(1), Barcode = reader.GetString(2), CanonicalProductId = reader.IsDBNull(3) ? null : reader.GetFieldValue<Guid>(3), Name = reader.GetString(4), Brand = reader.IsDBNull(5) ? null : reader.GetString(5), ImageUrl = reader.GetString(6), UnitAndSize = reader.IsDBNull(7) ? null : reader.GetString(7), MaxQuantity = reader.GetDecimal(8), IsDeleted = reader.GetBoolean(9), CreatedUtc = reader.GetDateTime(10), LastUpdatedUtc = reader.GetDateTime(11) } });
+                            result.Add(new GetStoreProductsRow { StoreProduct = new StoreProduct { StoreProductId = reader.GetFieldValue<Guid>(0), StoreName = reader.GetString(1), Barcode = reader.GetString(2), Name = reader.GetString(3), Brand = reader.IsDBNull(4) ? null : reader.GetString(4), ImageUrl = reader.GetString(5), UnitAndSize = reader.IsDBNull(6) ? null : reader.GetString(6), MaxQuantity = reader.IsDBNull(7) ? null : reader.GetDouble(7), IsDeleted = reader.GetBoolean(8), CreatedUtc = reader.GetDateTime(9), LastUpdatedUtc = reader.GetDateTime(10) } });
                         return result;
                     }
                 }
@@ -143,13 +99,13 @@ public class QueriesSql
             {
                 var result = new List<GetStoreProductsRow>();
                 while (await reader.ReadAsync())
-                    result.Add(new GetStoreProductsRow { StoreProduct = new StoreProduct { StoreProductId = reader.GetFieldValue<Guid>(0), StoreName = reader.GetString(1), Barcode = reader.GetString(2), CanonicalProductId = reader.IsDBNull(3) ? null : reader.GetFieldValue<Guid>(3), Name = reader.GetString(4), Brand = reader.IsDBNull(5) ? null : reader.GetString(5), ImageUrl = reader.GetString(6), UnitAndSize = reader.IsDBNull(7) ? null : reader.GetString(7), MaxQuantity = reader.GetDecimal(8), IsDeleted = reader.GetBoolean(9), CreatedUtc = reader.GetDateTime(10), LastUpdatedUtc = reader.GetDateTime(11) } });
+                    result.Add(new GetStoreProductsRow { StoreProduct = new StoreProduct { StoreProductId = reader.GetFieldValue<Guid>(0), StoreName = reader.GetString(1), Barcode = reader.GetString(2), Name = reader.GetString(3), Brand = reader.IsDBNull(4) ? null : reader.GetString(4), ImageUrl = reader.GetString(5), UnitAndSize = reader.IsDBNull(6) ? null : reader.GetString(6), MaxQuantity = reader.IsDBNull(7) ? null : reader.GetDouble(7), IsDeleted = reader.GetBoolean(8), CreatedUtc = reader.GetDateTime(9), LastUpdatedUtc = reader.GetDateTime(10) } });
                 return result;
             }
         }
     }
 
-    private const string GetStoreProductsByStoreSql = "select store_product.store_product_id, store_product.store_name, store_product.barcode, store_product.canonical_product_id, store_product.name, store_product.brand, store_product.image_url, store_product.unit_and_size, store_product.max_quantity, store_product.is_deleted, store_product.created_utc, store_product.last_updated_utc from store_product where store_name = @store_name and is_deleted = false";
+    private const string GetStoreProductsByStoreSql = "select store_product.store_product_id, store_product.store_name, store_product.barcode, store_product.name, store_product.brand, store_product.image_url, store_product.unit_and_size, store_product.max_quantity, store_product.is_deleted, store_product.created_utc, store_product.last_updated_utc from store_product where store_name = @store_name and is_deleted = false";
     public readonly record struct GetStoreProductsByStoreRow(StoreProduct? StoreProduct);
     public readonly record struct GetStoreProductsByStoreArgs(string StoreName);
     public async Task<List<GetStoreProductsByStoreRow>> GetStoreProductsByStore(GetStoreProductsByStoreArgs args)
@@ -165,7 +121,7 @@ public class QueriesSql
                     {
                         var result = new List<GetStoreProductsByStoreRow>();
                         while (await reader.ReadAsync())
-                            result.Add(new GetStoreProductsByStoreRow { StoreProduct = new StoreProduct { StoreProductId = reader.GetFieldValue<Guid>(0), StoreName = reader.GetString(1), Barcode = reader.GetString(2), CanonicalProductId = reader.IsDBNull(3) ? null : reader.GetFieldValue<Guid>(3), Name = reader.GetString(4), Brand = reader.IsDBNull(5) ? null : reader.GetString(5), ImageUrl = reader.GetString(6), UnitAndSize = reader.IsDBNull(7) ? null : reader.GetString(7), MaxQuantity = reader.GetDecimal(8), IsDeleted = reader.GetBoolean(9), CreatedUtc = reader.GetDateTime(10), LastUpdatedUtc = reader.GetDateTime(11) } });
+                            result.Add(new GetStoreProductsByStoreRow { StoreProduct = new StoreProduct { StoreProductId = reader.GetFieldValue<Guid>(0), StoreName = reader.GetString(1), Barcode = reader.GetString(2), Name = reader.GetString(3), Brand = reader.IsDBNull(4) ? null : reader.GetString(4), ImageUrl = reader.GetString(5), UnitAndSize = reader.IsDBNull(6) ? null : reader.GetString(6), MaxQuantity = reader.IsDBNull(7) ? null : reader.GetDouble(7), IsDeleted = reader.GetBoolean(8), CreatedUtc = reader.GetDateTime(9), LastUpdatedUtc = reader.GetDateTime(10) } });
                         return result;
                     }
                 }
@@ -183,14 +139,14 @@ public class QueriesSql
             {
                 var result = new List<GetStoreProductsByStoreRow>();
                 while (await reader.ReadAsync())
-                    result.Add(new GetStoreProductsByStoreRow { StoreProduct = new StoreProduct { StoreProductId = reader.GetFieldValue<Guid>(0), StoreName = reader.GetString(1), Barcode = reader.GetString(2), CanonicalProductId = reader.IsDBNull(3) ? null : reader.GetFieldValue<Guid>(3), Name = reader.GetString(4), Brand = reader.IsDBNull(5) ? null : reader.GetString(5), ImageUrl = reader.GetString(6), UnitAndSize = reader.IsDBNull(7) ? null : reader.GetString(7), MaxQuantity = reader.GetDecimal(8), IsDeleted = reader.GetBoolean(9), CreatedUtc = reader.GetDateTime(10), LastUpdatedUtc = reader.GetDateTime(11) } });
+                    result.Add(new GetStoreProductsByStoreRow { StoreProduct = new StoreProduct { StoreProductId = reader.GetFieldValue<Guid>(0), StoreName = reader.GetString(1), Barcode = reader.GetString(2), Name = reader.GetString(3), Brand = reader.IsDBNull(4) ? null : reader.GetString(4), ImageUrl = reader.GetString(5), UnitAndSize = reader.IsDBNull(6) ? null : reader.GetString(6), MaxQuantity = reader.IsDBNull(7) ? null : reader.GetDouble(7), IsDeleted = reader.GetBoolean(8), CreatedUtc = reader.GetDateTime(9), LastUpdatedUtc = reader.GetDateTime(10) } });
                 return result;
             }
         }
     }
 
     private const string UpdateStoreProductSql = "update store_product set name = @name, brand = @brand, image_url = @image_url, max_quantity = @max_quantity, last_updated_utc = now() where barcode = @barcode and store_name = @store_name";
-    public readonly record struct UpdateStoreProductArgs(string Name, string? Brand, string ImageUrl, decimal MaxQuantity, string Barcode, string StoreName);
+    public readonly record struct UpdateStoreProductArgs(string Name, string? Brand, string ImageUrl, double? MaxQuantity, string Barcode, string StoreName);
     public async Task UpdateStoreProduct(UpdateStoreProductArgs args)
     {
         if (this.Transaction == null)
@@ -202,7 +158,7 @@ public class QueriesSql
                     command.Parameters.AddWithValue("@name", args.Name);
                     command.Parameters.AddWithValue("@brand", args.Brand ?? (object)DBNull.Value);
                     command.Parameters.AddWithValue("@image_url", args.ImageUrl);
-                    command.Parameters.AddWithValue("@max_quantity", args.MaxQuantity);
+                    command.Parameters.AddWithValue("@max_quantity", args.MaxQuantity ?? (object)DBNull.Value);
                     command.Parameters.AddWithValue("@barcode", args.Barcode);
                     command.Parameters.AddWithValue("@store_name", args.StoreName);
                     await command.ExecuteNonQueryAsync();
@@ -221,10 +177,215 @@ public class QueriesSql
             command.Parameters.AddWithValue("@name", args.Name);
             command.Parameters.AddWithValue("@brand", args.Brand ?? (object)DBNull.Value);
             command.Parameters.AddWithValue("@image_url", args.ImageUrl);
-            command.Parameters.AddWithValue("@max_quantity", args.MaxQuantity);
+            command.Parameters.AddWithValue("@max_quantity", args.MaxQuantity ?? (object)DBNull.Value);
             command.Parameters.AddWithValue("@barcode", args.Barcode);
             command.Parameters.AddWithValue("@store_name", args.StoreName);
             await command.ExecuteNonQueryAsync();
+        }
+    }
+
+    private const string CreateCanonicalProductsSql = "COPY product (barcode, brand, name, image_url, unit_and_size, max_quantity) FROM STDIN (FORMAT BINARY)";
+    public readonly record struct CreateCanonicalProductsArgs(string Barcode, string Brand, string Name, string ImageUrl, string? UnitAndSize, double? MaxQuantity);
+    public async Task CreateCanonicalProducts(List<CreateCanonicalProductsArgs> args)
+    {
+        using (var connection = new NpgsqlConnection(ConnectionString))
+        {
+            await connection.OpenAsync();
+            using (var writer = await connection.BeginBinaryImportAsync(CreateCanonicalProductsSql))
+            {
+                foreach (var row in args)
+                {
+                    await writer.StartRowAsync();
+                    await writer.WriteAsync(row.Barcode);
+                    await writer.WriteAsync(row.Brand);
+                    await writer.WriteAsync(row.Name);
+                    await writer.WriteAsync(row.ImageUrl);
+                    await writer.WriteAsync(row.UnitAndSize ?? (object)DBNull.Value);
+                    await writer.WriteAsync(row.MaxQuantity ?? (object)DBNull.Value);
+                }
+
+                await writer.CompleteAsync();
+            }
+
+            await connection.CloseAsync();
+        }
+    }
+
+    private const string GetCanonicalProductsSql = "select product.product_id, product.barcode, product.brand, product.name, product.image_url, product.unit_and_size, product.max_quantity, product.is_deleted, product.created_utc, product.last_updated_utc from product where barcode = any (@barcodes::varchar(255)[]) and is_deleted = false";
+    public readonly record struct GetCanonicalProductsRow(Product? Product);
+    public readonly record struct GetCanonicalProductsArgs(string[] Barcodes);
+    public async Task<List<GetCanonicalProductsRow>> GetCanonicalProducts(GetCanonicalProductsArgs args)
+    {
+        if (this.Transaction == null)
+        {
+            using (var connection = NpgsqlDataSource.Create(ConnectionString!))
+            {
+                using (var command = connection.CreateCommand(GetCanonicalProductsSql))
+                {
+                    command.Parameters.AddWithValue("@barcodes", args.Barcodes);
+                    using (var reader = await command.ExecuteReaderAsync())
+                    {
+                        var result = new List<GetCanonicalProductsRow>();
+                        while (await reader.ReadAsync())
+                            result.Add(new GetCanonicalProductsRow { Product = new Product { ProductId = reader.GetFieldValue<Guid>(0), Barcode = reader.GetString(1), Brand = reader.GetString(2), Name = reader.GetString(3), ImageUrl = reader.GetString(4), UnitAndSize = reader.IsDBNull(5) ? null : reader.GetString(5), MaxQuantity = reader.IsDBNull(6) ? null : reader.GetDouble(6), IsDeleted = reader.GetBoolean(7), CreatedUtc = reader.GetDateTime(8), LastUpdatedUtc = reader.GetDateTime(9) } });
+                        return result;
+                    }
+                }
+            }
+        }
+
+        if (this.Transaction?.Connection == null || this.Transaction?.Connection.State != System.Data.ConnectionState.Open)
+            throw new InvalidOperationException("Transaction is provided, but its connection is null.");
+        using (var command = this.Transaction.Connection.CreateCommand())
+        {
+            command.CommandText = GetCanonicalProductsSql;
+            command.Transaction = this.Transaction;
+            command.Parameters.AddWithValue("@barcodes", args.Barcodes);
+            using (var reader = await command.ExecuteReaderAsync())
+            {
+                var result = new List<GetCanonicalProductsRow>();
+                while (await reader.ReadAsync())
+                    result.Add(new GetCanonicalProductsRow { Product = new Product { ProductId = reader.GetFieldValue<Guid>(0), Barcode = reader.GetString(1), Brand = reader.GetString(2), Name = reader.GetString(3), ImageUrl = reader.GetString(4), UnitAndSize = reader.IsDBNull(5) ? null : reader.GetString(5), MaxQuantity = reader.IsDBNull(6) ? null : reader.GetDouble(6), IsDeleted = reader.GetBoolean(7), CreatedUtc = reader.GetDateTime(8), LastUpdatedUtc = reader.GetDateTime(9) } });
+                return result;
+            }
+        }
+    }
+
+    private const string CreateCanonicalStoreProductsSql = "COPY product_store_product (product_id, store_product_id) FROM STDIN (FORMAT BINARY)";
+    public readonly record struct CreateCanonicalStoreProductsArgs(Guid ProductId, Guid StoreProductId);
+    public async Task CreateCanonicalStoreProducts(List<CreateCanonicalStoreProductsArgs> args)
+    {
+        using (var connection = new NpgsqlConnection(ConnectionString))
+        {
+            await connection.OpenAsync();
+            using (var writer = await connection.BeginBinaryImportAsync(CreateCanonicalStoreProductsSql))
+            {
+                foreach (var row in args)
+                {
+                    await writer.StartRowAsync();
+                    await writer.WriteAsync(row.ProductId);
+                    await writer.WriteAsync(row.StoreProductId);
+                }
+
+                await writer.CompleteAsync();
+            }
+
+            await connection.CloseAsync();
+        }
+    }
+
+    private const string CreateCanonicalProductSql = "insert into product (barcode, brand, name, image_url, unit_and_size, max_quantity) values (@barcode, @brand, @name, @image_url, @unit_and_size, @max_quantity) returning product_id, barcode, brand, name, image_url, unit_and_size, max_quantity, is_deleted, created_utc, last_updated_utc";
+    public readonly record struct CreateCanonicalProductRow(Guid ProductId, string Barcode, string Brand, string Name, string ImageUrl, string? UnitAndSize, double? MaxQuantity, bool IsDeleted, DateTime CreatedUtc, DateTime LastUpdatedUtc);
+    public readonly record struct CreateCanonicalProductArgs(string Barcode, string Brand, string Name, string ImageUrl, string? UnitAndSize, double? MaxQuantity);
+    public async Task<CreateCanonicalProductRow?> CreateCanonicalProduct(CreateCanonicalProductArgs args)
+    {
+        if (this.Transaction == null)
+        {
+            using (var connection = NpgsqlDataSource.Create(ConnectionString!))
+            {
+                using (var command = connection.CreateCommand(CreateCanonicalProductSql))
+                {
+                    command.Parameters.AddWithValue("@barcode", args.Barcode);
+                    command.Parameters.AddWithValue("@brand", args.Brand);
+                    command.Parameters.AddWithValue("@name", args.Name);
+                    command.Parameters.AddWithValue("@image_url", args.ImageUrl);
+                    command.Parameters.AddWithValue("@unit_and_size", args.UnitAndSize ?? (object)DBNull.Value);
+                    command.Parameters.AddWithValue("@max_quantity", args.MaxQuantity ?? (object)DBNull.Value);
+                    using (var reader = await command.ExecuteReaderAsync())
+                    {
+                        if (await reader.ReadAsync())
+                        {
+                            return new CreateCanonicalProductRow
+                            {
+                                ProductId = reader.GetFieldValue<Guid>(0),
+                                Barcode = reader.GetString(1),
+                                Brand = reader.GetString(2),
+                                Name = reader.GetString(3),
+                                ImageUrl = reader.GetString(4),
+                                UnitAndSize = reader.IsDBNull(5) ? null : reader.GetString(5),
+                                MaxQuantity = reader.IsDBNull(6) ? null : reader.GetDouble(6),
+                                IsDeleted = reader.GetBoolean(7),
+                                CreatedUtc = reader.GetDateTime(8),
+                                LastUpdatedUtc = reader.GetDateTime(9)
+                            };
+                        }
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        if (this.Transaction?.Connection == null || this.Transaction?.Connection.State != System.Data.ConnectionState.Open)
+            throw new InvalidOperationException("Transaction is provided, but its connection is null.");
+        using (var command = this.Transaction.Connection.CreateCommand())
+        {
+            command.CommandText = CreateCanonicalProductSql;
+            command.Transaction = this.Transaction;
+            command.Parameters.AddWithValue("@barcode", args.Barcode);
+            command.Parameters.AddWithValue("@brand", args.Brand);
+            command.Parameters.AddWithValue("@name", args.Name);
+            command.Parameters.AddWithValue("@image_url", args.ImageUrl);
+            command.Parameters.AddWithValue("@unit_and_size", args.UnitAndSize ?? (object)DBNull.Value);
+            command.Parameters.AddWithValue("@max_quantity", args.MaxQuantity ?? (object)DBNull.Value);
+            using (var reader = await command.ExecuteReaderAsync())
+            {
+                if (await reader.ReadAsync())
+                {
+                    return new CreateCanonicalProductRow
+                    {
+                        ProductId = reader.GetFieldValue<Guid>(0),
+                        Barcode = reader.GetString(1),
+                        Brand = reader.GetString(2),
+                        Name = reader.GetString(3),
+                        ImageUrl = reader.GetString(4),
+                        UnitAndSize = reader.IsDBNull(5) ? null : reader.GetString(5),
+                        MaxQuantity = reader.IsDBNull(6) ? null : reader.GetDouble(6),
+                        IsDeleted = reader.GetBoolean(7),
+                        CreatedUtc = reader.GetDateTime(8),
+                        LastUpdatedUtc = reader.GetDateTime(9)
+                    };
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private const string GetAllProductsSql = "select p.product_id, p.barcode, p.image_url, p.brand, p.name, p.unit_and_size, p.max_quantity, sp.store_name from product p join product_store_product psp on p.product_id = psp.product_id join store_product sp on psp.store_product_id = sp.store_product_id where p.is_deleted = false order by p.product_id asc";
+    public readonly record struct GetAllProductsRow(Guid ProductId, string Barcode, string ImageUrl, string Brand, string Name, string? UnitAndSize, double? MaxQuantity, string StoreName);
+    public async Task<List<GetAllProductsRow>> GetAllProducts()
+    {
+        if (this.Transaction == null)
+        {
+            using (var connection = NpgsqlDataSource.Create(ConnectionString!))
+            {
+                using (var command = connection.CreateCommand(GetAllProductsSql))
+                {
+                    using (var reader = await command.ExecuteReaderAsync())
+                    {
+                        var result = new List<GetAllProductsRow>();
+                        while (await reader.ReadAsync())
+                            result.Add(new GetAllProductsRow { ProductId = reader.GetFieldValue<Guid>(0), Barcode = reader.GetString(1), ImageUrl = reader.GetString(2), Brand = reader.GetString(3), Name = reader.GetString(4), UnitAndSize = reader.IsDBNull(5) ? null : reader.GetString(5), MaxQuantity = reader.IsDBNull(6) ? null : reader.GetDouble(6), StoreName = reader.GetString(7) });
+                        return result;
+                    }
+                }
+            }
+        }
+
+        if (this.Transaction?.Connection == null || this.Transaction?.Connection.State != System.Data.ConnectionState.Open)
+            throw new InvalidOperationException("Transaction is provided, but its connection is null.");
+        using (var command = this.Transaction.Connection.CreateCommand())
+        {
+            command.CommandText = GetAllProductsSql;
+            command.Transaction = this.Transaction;
+            using (var reader = await command.ExecuteReaderAsync())
+            {
+                var result = new List<GetAllProductsRow>();
+                while (await reader.ReadAsync())
+                    result.Add(new GetAllProductsRow { ProductId = reader.GetFieldValue<Guid>(0), Barcode = reader.GetString(1), ImageUrl = reader.GetString(2), Brand = reader.GetString(3), Name = reader.GetString(4), UnitAndSize = reader.IsDBNull(5) ? null : reader.GetString(5), MaxQuantity = reader.IsDBNull(6) ? null : reader.GetDouble(6), StoreName = reader.GetString(7) });
+                return result;
+            }
         }
     }
 }
