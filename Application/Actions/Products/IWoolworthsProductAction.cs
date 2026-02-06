@@ -11,8 +11,6 @@ public interface IWoolworthsProductAction
     public Task SyncProductsAsync();
 
     public Task<IList<Categoery>> GetAllCategoriesAsync();
-
-    // public Task<IList<ProductDto>> SearchProductsAsync(string term, int limit, int skip);
 }
 
 public class WoolworthsProductAction : IWoolworthsProductAction
@@ -95,7 +93,8 @@ public class WoolworthsProductAction : IWoolworthsProductAction
                     StoreName = StoreName.Woolworths.ToDescription(),
                     ImageUrl = c.Images.Big,
                     MaxQuantity = (int)c.Quantity.Max,
-                    UnitAndSize = GetUnitAndSize(c)
+                    UnitAndSize = GetUnitAndSize(c),
+                    StoreSku = c.Sku
                 }));
             }
         }
@@ -198,6 +197,7 @@ public class WoolworthsProductAction : IWoolworthsProductAction
                     ImageUrl = c.ImageUrl,
                     MaxQuantity = c.MaxQuantity,
                     UnitAndSize = c.UnitAndSize,
+                    StoreSku = c.StoreSku
                 })
         ]);
     }

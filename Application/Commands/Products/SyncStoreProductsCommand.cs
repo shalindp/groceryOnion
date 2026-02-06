@@ -18,9 +18,9 @@ public class SyncStoreProductsCommand : ICommand<bool, SyncStoreProductsRequest>
         _paknSaveProductAction = paknSaveProductAction;
     }
 
-    public async Task<bool> SendAsync(SyncStoreProductsRequest requestBody)
+    public async Task<bool> SendAsync(SyncStoreProductsRequest request)
     {
-        var storesToSync = requestBody.Stores ?? [StoreName.Woolworths, StoreName.NewWorld, StoreName.PaknSave];
+        var storesToSync = request.Stores ?? [StoreName.Woolworths, StoreName.NewWorld, StoreName.PaknSave];
 
         var tasks = new List<Task?>();
         

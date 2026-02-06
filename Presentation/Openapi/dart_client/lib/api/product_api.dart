@@ -110,7 +110,7 @@ class ProductApi {
   /// * [int] limit:
   ///
   /// * [int] skip:
-  Future<List<CanonicalProduct>?> searchProducts({ String? term, int? limit, int? skip, }) async {
+  Future<List<ProductResponse>?> searchProducts({ String? term, int? limit, int? skip, }) async {
     final response = await searchProductsWithHttpInfo( term: term, limit: limit, skip: skip, );
     if (response.statusCode >= HttpStatus.badRequest) {
       throw ApiException(response.statusCode, await _decodeBodyBytes(response));
@@ -120,8 +120,8 @@ class ProductApi {
     // FormatException when trying to decode an empty string.
     if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
       final responseBody = await _decodeBodyBytes(response);
-      return (await apiClient.deserializeAsync(responseBody, 'List<CanonicalProduct>') as List)
-        .cast<CanonicalProduct>()
+      return (await apiClient.deserializeAsync(responseBody, 'List<ProductResponse>') as List)
+        .cast<ProductResponse>()
         .toList(growable: false);
 
     }

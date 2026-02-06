@@ -8,10 +8,11 @@ import 'package:grocery_api/api.dart';
 ## Properties
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**sku** | **String** |  | 
+**productId** | **String** |  | 
+**barcode** | **String** |  | 
 **name** | **String** |  | 
 **brand** | **String** |  | 
-**storeType** | **int** |  | 
+**storeType** | [**StoreName**](StoreName.md) |  | 
 **imageUrl** | **String** |  | 
 **maxQuantity** | **double** |  | 
 **pricingUrls** | [**List<PricingUrlResponse>**](PricingUrlResponse.md) |  | [default to const []]

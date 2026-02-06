@@ -13,7 +13,8 @@ part of openapi.api;
 class ProductResponse {
   /// Returns a new [ProductResponse] instance.
   ProductResponse({
-    required this.sku,
+    required this.productId,
+    required this.barcode,
     required this.name,
     required this.brand,
     required this.storeType,
@@ -22,13 +23,15 @@ class ProductResponse {
     this.pricingUrls = const [],
   });
 
-  String sku;
+  String productId;
+
+  String barcode;
 
   String name;
 
   String brand;
 
-  int storeType;
+  StoreName storeType;
 
   String imageUrl;
 
@@ -38,7 +41,8 @@ class ProductResponse {
 
   @override
   bool operator ==(Object other) => identical(this, other) || other is ProductResponse &&
-    other.sku == sku &&
+    other.productId == productId &&
+    other.barcode == barcode &&
     other.name == name &&
     other.brand == brand &&
     other.storeType == storeType &&
@@ -49,7 +53,8 @@ class ProductResponse {
   @override
   int get hashCode =>
     // ignore: unnecessary_parenthesis
-    (sku.hashCode) +
+    (productId.hashCode) +
+    (barcode.hashCode) +
     (name.hashCode) +
     (brand.hashCode) +
     (storeType.hashCode) +
@@ -58,11 +63,12 @@ class ProductResponse {
     (pricingUrls.hashCode);
 
   @override
-  String toString() => 'ProductResponse[sku=$sku, name=$name, brand=$brand, storeType=$storeType, imageUrl=$imageUrl, maxQuantity=$maxQuantity, pricingUrls=$pricingUrls]';
+  String toString() => 'ProductResponse[productId=$productId, barcode=$barcode, name=$name, brand=$brand, storeType=$storeType, imageUrl=$imageUrl, maxQuantity=$maxQuantity, pricingUrls=$pricingUrls]';
 
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{};
-      json[r'sku'] = this.sku;
+      json[r'productId'] = this.productId;
+      json[r'barcode'] = this.barcode;
       json[r'name'] = this.name;
       json[r'brand'] = this.brand;
       json[r'storeType'] = this.storeType;
@@ -91,10 +97,11 @@ class ProductResponse {
       }());
 
       return ProductResponse(
-        sku: mapValueOfType<String>(json, r'sku')!,
+        productId: mapValueOfType<String>(json, r'productId')!,
+        barcode: mapValueOfType<String>(json, r'barcode')!,
         name: mapValueOfType<String>(json, r'name')!,
         brand: mapValueOfType<String>(json, r'brand')!,
-        storeType: mapValueOfType<int>(json, r'storeType')!,
+        storeType: StoreName.fromJson(json[r'storeType'])!,
         imageUrl: mapValueOfType<String>(json, r'imageUrl')!,
         maxQuantity: mapValueOfType<double>(json, r'maxQuantity')!,
         pricingUrls: PricingUrlResponse.listFromJson(json[r'pricingUrls']),
@@ -145,7 +152,8 @@ class ProductResponse {
 
   /// The list of required keys that must be present in a JSON.
   static const requiredKeys = <String>{
-    'sku',
+    'productId',
+    'barcode',
     'name',
     'brand',
     'storeType',

@@ -1,11 +1,6 @@
-using System.ComponentModel.DataAnnotations;
-using Application.Actions;
 using Application.Actions.Regions;
 using Microsoft.AspNetCore.Mvc;
 using Presentation.Mappers;
-using Presentation.Requests;
-using Presentation.Responses;
-using Swashbuckle.AspNetCore.Annotations;
 
 namespace Presentation.Controllers;
 
@@ -27,15 +22,5 @@ public class RegionController : ControllerBase
     {
         var result = await _woolworthsRegionAction.GetRegionsAsync();
         return result;
-    }
-
-    [HttpPost("create-session", Name = nameof(CreateSessionWithRegionsAsync))]
-    [ProducesResponseType(typeof(IList<CreateSessionWithRegionResponse>), StatusCodes.Status200OK)]
-    public async Task<IList<CreateSessionWithRegionResponse>> CreateSessionWithRegionsAsync(
-        [FromBody] [Required] IList<CreateSessionWithRegionId> request)
-    {
-        var result =
-            await _woolworthsRegionAction.CreateSessionWithRegionsAsync(request.Select(c => c.RegionId).ToArray());
-        return _mapper.Map(result);
     }
 }

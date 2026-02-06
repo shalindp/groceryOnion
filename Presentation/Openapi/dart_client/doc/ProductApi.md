@@ -53,7 +53,7 @@ No authorization required
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **searchProducts**
-> List<CanonicalProduct> searchProducts(term, limit, skip)
+> List<ProductResponse> searchProducts(term, limit, skip)
 
 
 
@@ -84,7 +84,7 @@ Name | Type | Description  | Notes
 
 ### Return type
 
-[**List<CanonicalProduct>**](CanonicalProduct.md)
+[**List<ProductResponse>**](ProductResponse.md)
 
 ### Authorization
 

@@ -5,5 +5,7 @@ using System.Linq;
 
 namespace Persistence;
 public readonly record struct Product(Guid ProductId, string Barcode, string Brand, string Name, string ImageUrl, string? UnitAndSize, double? MaxQuantity, bool IsDeleted, DateTime CreatedUtc, DateTime LastUpdatedUtc);
-public readonly record struct StoreProduct(Guid StoreProductId, string StoreName, string Barcode, string Name, string? Brand, string ImageUrl, string? UnitAndSize, double? MaxQuantity, bool IsDeleted, DateTime CreatedUtc, DateTime LastUpdatedUtc);
+public readonly record struct StoreProduct(Guid StoreProductId, string StoreName, string Barcode, string StoreSku, string Name, string? Brand, string ImageUrl, string? UnitAndSize, double? MaxQuantity, bool IsDeleted, DateTime CreatedUtc, DateTime LastUpdatedUtc);
 public readonly record struct ProductStoreProduct(Guid ProductId, Guid StoreProductId);
+public readonly record struct AppUser(Guid AppUserId, string Username, string PasswordHash, bool IsDeleted, DateTime CreatedUtc, DateTime LastUpdatedUtc);
+public readonly record struct RefreshToken(Guid AppUserId, string Token, DateTime ExpiresUtc, bool IsDeleted, DateTime CreatedUtc, DateTime LastUpdatedUtc);

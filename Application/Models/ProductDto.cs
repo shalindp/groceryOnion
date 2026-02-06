@@ -14,3 +14,17 @@ public class ProductDto
     
     public IList<PricingUrlDto> PricingUrls { get; set; }
 }
+
+public class PricingUrlDto
+{
+    public StoreName StoreName { get; set; }
+    public string Sku { get; set; }
+
+    public string PricingUrl =>
+        StoreName switch
+        {
+            StoreName.Woolworths => $"https://www.woolworths.co.nz/api/v1/products/{Sku}",
+            StoreName.PaknSave => $"https://api-prod.paknsave.co.nz/v1/edge/store/[[storeId]]/product/{Sku}",
+            _ => ""
+        };
+}

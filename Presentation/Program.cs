@@ -1,4 +1,7 @@
+using System.Text;
 using Application.Settings;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
 using Presentation.Mappers;
 using Microsoft.OpenApi;
 using Persistence.Settings;
@@ -22,6 +25,28 @@ builder.Services.AddSwaggerGen(options =>
 //     client.DefaultRequestHeaders.Add("x-requested-with", "OnlineShopping.WebApp");
 // });
 
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+}).AddJwtBearer(options =>
+{
+    options.RequireHttpsMetadata = false;
+    options.SaveToken = true;
+    options.TokenValidationParameters = new TokenValidationParameters()
+    {
+        ValidIssuer = builder.Configuration["Jwt:Issuer"],
+        ValidAudience = builder.Configuration["Jwt:Audience"],
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:SecretKey"]!)),
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+    };
+});
+builder.Services.AddAuthorization();
+
 builder.Services.AddScoped<IHttpHelper, HttpHelper>();
 
 
@@ -30,6 +55,7 @@ ApplicationModule.AddToService(builder.Services);
 
 builder.Services.AddSingleton<IProductMapper, ProductMapper>();
 builder.Services.AddSingleton<IRegionMapper, RegionMapper>();
+builder.Services.AddSingleton<IUserMapper, UserMapper>();
 
 
 var app = builder.Build();
@@ -42,6 +68,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();

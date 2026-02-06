@@ -1,8 +1,9 @@
 using Application.Actions.Products;
 using Application.Commands.Products;
-using Application.Commands.Queries.Products;
 using Application.Enums;
 using Application.Models;
+using Application.Queries;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Presentation.Mappers;
 using Presentation.Responses;
@@ -10,6 +11,7 @@ using Presentation.Responses;
 namespace Presentation.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("[controller]")]
 public class ProductController : ControllerBase
 {

@@ -9,6 +9,8 @@ namespace Application.Actions.Products;
 public interface IPaknSaveProductAction
 {
     public Task SyncProductsAsync();
+    public Task<string> CreateAccessTokenAsync();
+
 }
 
 public class PaknSaveProductAction : IPaknSaveProductAction
@@ -92,6 +94,7 @@ public class PaknSaveProductAction : IPaknSaveProductAction
                     ImageUrl = c.ImageUrl,
                     MaxQuantity = c.MaxQuantity,
                     UnitAndSize = c.UnitAndSize,
+                    StoreSku = c.StoreSku
                 })
         ]);
     }
@@ -176,6 +179,7 @@ public class PaknSaveProductAction : IPaknSaveProductAction
             ImageUrl = $"https://a.fsimg.co.nz/product/retail/fan/image/400x400/{c.ProductId.Split('-')[0]}.png?w=256",
             MaxQuantity = 999,
             UnitAndSize = c.DisplayName,
+            StoreSku = c.ProductId
         }).ToList();
     }
 
@@ -194,7 +198,7 @@ public class PaknSaveProductAction : IPaknSaveProductAction
 
     private record CreateTokenResponse(string access_token);
 
-    private async Task<CreateTokenResponse> CreateAccessTokenAsync()
+    public async Task<string> CreateAccessTokenAsync()
     {
         const string url = "https://www.paknsave.co.nz/api/user/get-current-user";
         var body = new Dictionary<string, string>()
@@ -205,7 +209,7 @@ public class PaknSaveProductAction : IPaknSaveProductAction
         };
 
         var response = await _httpHelper.PostAsync<CreateTokenResponse>(url, payload: body);
-        return response.Body!;
+        return response.Body!.access_token!;
     }
 
     public static string GenerateRandomHex32()
@@ -215,11 +219,11 @@ public class PaknSaveProductAction : IPaknSaveProductAction
         return Convert.ToHexString(bytes).ToLowerInvariant();
     }
 
-    private Dictionary<string, string> GetAuthentication(CreateTokenResponse tokenResponse)
+    private Dictionary<string, string> GetAuthentication(string accessToken)
     {
         return new Dictionary<string, string>()
         {
-            ["authorization"] = $"Bearer {tokenResponse.access_token}"
+            ["authorization"] = $"Bearer {accessToken}"
         };
     }
 

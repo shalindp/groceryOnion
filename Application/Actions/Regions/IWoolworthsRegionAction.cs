@@ -6,8 +6,8 @@ namespace Application.Actions.Regions;
 
 public interface IWoolworthsRegionAction
 {
-    public Task<CreateSessionWithRegionDto[]> CreateSessionWithRegionsAsync(int[] regionIds);
-    public Task<CreateSessionWithRegionDto> CreateSessionWithRegionAsync(int regionIds);
+    public Task<CreateSessionWithRegionDto[]> CreateSessionWithRegionsAsync(int[] addressIds);
+    public Task<CreateSessionWithRegionDto> CreateSessionWithRegionAsync(int addressId);
     public Task<IList<WoolworthsGetRegionsResult>> GetRegionsAsync();
 }
 
@@ -41,11 +41,11 @@ public class WoolworthsRegionAction : IWoolworthsRegionAction
 
     private record StoreAddressesResponse(int Id, string Name);
 
-    public async Task<CreateSessionWithRegionDto[]> CreateSessionWithRegionsAsync(int[] regionIds)
+    public async Task<CreateSessionWithRegionDto[]> CreateSessionWithRegionsAsync(int[] addressIds)
     {
         var tasks = new List<Task<CreateSessionWithRegionDto>>();
 
-        foreach (var regionId in regionIds)
+        foreach (var regionId in addressIds)
         {
             var task = CreateSessionWithRegionAsync(regionId);
             tasks.Add(task);
@@ -54,12 +54,12 @@ public class WoolworthsRegionAction : IWoolworthsRegionAction
         return await Task.WhenAll(tasks);
     }
 
-    public async Task<CreateSessionWithRegionDto> CreateSessionWithRegionAsync(int regionId)
+    public async Task<CreateSessionWithRegionDto> CreateSessionWithRegionAsync(int addressId)
     {
         var url = "https://www.woolworths.co.nz/api/v1/fulfilment/my/pickup-addresses";
         var body = new
         {
-            addressId = regionId
+            addressId = addressId
         };
 
         var result = await _httpHelper.PutAsync<ChangeRegionResponse>(url, body,

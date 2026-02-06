@@ -35,8 +35,8 @@ public class QueriesSql
     private NpgsqlTransaction? Transaction { get; }
     private string? ConnectionString { get; }
 
-    private const string CreateProductsSql = "COPY store_product (store_name, barcode, name, brand, image_url, max_quantity, unit_and_size) FROM STDIN (FORMAT BINARY)";
-    public readonly record struct CreateProductsArgs(string StoreName, string Barcode, string Name, string? Brand, string ImageUrl, double? MaxQuantity, string? UnitAndSize);
+    private const string CreateProductsSql = "COPY store_product (store_name, barcode, name, brand, image_url, max_quantity, unit_and_size, store_sku) FROM STDIN (FORMAT BINARY)";
+    public readonly record struct CreateProductsArgs(string StoreName, string Barcode, string Name, string? Brand, string ImageUrl, double? MaxQuantity, string? UnitAndSize, string StoreSku);
     public async Task CreateProducts(List<CreateProductsArgs> args)
     {
         using (var connection = new NpgsqlConnection(ConnectionString))
@@ -54,6 +54,7 @@ public class QueriesSql
                     await writer.WriteAsync(row.ImageUrl);
                     await writer.WriteAsync(row.MaxQuantity ?? (object)DBNull.Value);
                     await writer.WriteAsync(row.UnitAndSize ?? (object)DBNull.Value);
+                    await writer.WriteAsync(row.StoreSku);
                 }
 
                 await writer.CompleteAsync();
@@ -63,7 +64,7 @@ public class QueriesSql
         }
     }
 
-    private const string GetStoreProductsSql = "select store_product.store_product_id, store_product.store_name, store_product.barcode, store_product.name, store_product.brand, store_product.image_url, store_product.unit_and_size, store_product.max_quantity, store_product.is_deleted, store_product.created_utc, store_product.last_updated_utc from store_product where barcode = any (@skus::varchar(255)[]) and store_name = @store_name and is_deleted = false";
+    private const string GetStoreProductsSql = "select store_product.store_product_id, store_product.store_name, store_product.barcode, store_product.store_sku, store_product.name, store_product.brand, store_product.image_url, store_product.unit_and_size, store_product.max_quantity, store_product.is_deleted, store_product.created_utc, store_product.last_updated_utc from store_product where barcode = any (@skus::varchar(255)[]) and store_name = @store_name and is_deleted = false";
     public readonly record struct GetStoreProductsRow(StoreProduct? StoreProduct);
     public readonly record struct GetStoreProductsArgs(string[] Skus, string StoreName);
     public async Task<List<GetStoreProductsRow>> GetStoreProducts(GetStoreProductsArgs args)
@@ -80,7 +81,7 @@ public class QueriesSql
                     {
                         var result = new List<GetStoreProductsRow>();
                         while (await reader.ReadAsync())
-                            result.Add(new GetStoreProductsRow { StoreProduct = new StoreProduct { StoreProductId = reader.GetFieldValue<Guid>(0), StoreName = reader.GetString(1), Barcode = reader.GetString(2), Name = reader.GetString(3), Brand = reader.IsDBNull(4) ? null : reader.GetString(4), ImageUrl = reader.GetString(5), UnitAndSize = reader.IsDBNull(6) ? null : reader.GetString(6), MaxQuantity = reader.IsDBNull(7) ? null : reader.GetDouble(7), IsDeleted = reader.GetBoolean(8), CreatedUtc = reader.GetDateTime(9), LastUpdatedUtc = reader.GetDateTime(10) } });
+                            result.Add(new GetStoreProductsRow { StoreProduct = new StoreProduct { StoreProductId = reader.GetFieldValue<Guid>(0), StoreName = reader.GetString(1), Barcode = reader.GetString(2), StoreSku = reader.GetString(3), Name = reader.GetString(4), Brand = reader.IsDBNull(5) ? null : reader.GetString(5), ImageUrl = reader.GetString(6), UnitAndSize = reader.IsDBNull(7) ? null : reader.GetString(7), MaxQuantity = reader.IsDBNull(8) ? null : reader.GetDouble(8), IsDeleted = reader.GetBoolean(9), CreatedUtc = reader.GetDateTime(10), LastUpdatedUtc = reader.GetDateTime(11) } });
                         return result;
                     }
                 }
@@ -99,13 +100,13 @@ public class QueriesSql
             {
                 var result = new List<GetStoreProductsRow>();
                 while (await reader.ReadAsync())
-                    result.Add(new GetStoreProductsRow { StoreProduct = new StoreProduct { StoreProductId = reader.GetFieldValue<Guid>(0), StoreName = reader.GetString(1), Barcode = reader.GetString(2), Name = reader.GetString(3), Brand = reader.IsDBNull(4) ? null : reader.GetString(4), ImageUrl = reader.GetString(5), UnitAndSize = reader.IsDBNull(6) ? null : reader.GetString(6), MaxQuantity = reader.IsDBNull(7) ? null : reader.GetDouble(7), IsDeleted = reader.GetBoolean(8), CreatedUtc = reader.GetDateTime(9), LastUpdatedUtc = reader.GetDateTime(10) } });
+                    result.Add(new GetStoreProductsRow { StoreProduct = new StoreProduct { StoreProductId = reader.GetFieldValue<Guid>(0), StoreName = reader.GetString(1), Barcode = reader.GetString(2), StoreSku = reader.GetString(3), Name = reader.GetString(4), Brand = reader.IsDBNull(5) ? null : reader.GetString(5), ImageUrl = reader.GetString(6), UnitAndSize = reader.IsDBNull(7) ? null : reader.GetString(7), MaxQuantity = reader.IsDBNull(8) ? null : reader.GetDouble(8), IsDeleted = reader.GetBoolean(9), CreatedUtc = reader.GetDateTime(10), LastUpdatedUtc = reader.GetDateTime(11) } });
                 return result;
             }
         }
     }
 
-    private const string GetStoreProductsByStoreSql = "select store_product.store_product_id, store_product.store_name, store_product.barcode, store_product.name, store_product.brand, store_product.image_url, store_product.unit_and_size, store_product.max_quantity, store_product.is_deleted, store_product.created_utc, store_product.last_updated_utc from store_product where store_name = @store_name and is_deleted = false";
+    private const string GetStoreProductsByStoreSql = "select store_product.store_product_id, store_product.store_name, store_product.barcode, store_product.store_sku, store_product.name, store_product.brand, store_product.image_url, store_product.unit_and_size, store_product.max_quantity, store_product.is_deleted, store_product.created_utc, store_product.last_updated_utc from store_product where store_name = @store_name and is_deleted = false";
     public readonly record struct GetStoreProductsByStoreRow(StoreProduct? StoreProduct);
     public readonly record struct GetStoreProductsByStoreArgs(string StoreName);
     public async Task<List<GetStoreProductsByStoreRow>> GetStoreProductsByStore(GetStoreProductsByStoreArgs args)
@@ -121,7 +122,7 @@ public class QueriesSql
                     {
                         var result = new List<GetStoreProductsByStoreRow>();
                         while (await reader.ReadAsync())
-                            result.Add(new GetStoreProductsByStoreRow { StoreProduct = new StoreProduct { StoreProductId = reader.GetFieldValue<Guid>(0), StoreName = reader.GetString(1), Barcode = reader.GetString(2), Name = reader.GetString(3), Brand = reader.IsDBNull(4) ? null : reader.GetString(4), ImageUrl = reader.GetString(5), UnitAndSize = reader.IsDBNull(6) ? null : reader.GetString(6), MaxQuantity = reader.IsDBNull(7) ? null : reader.GetDouble(7), IsDeleted = reader.GetBoolean(8), CreatedUtc = reader.GetDateTime(9), LastUpdatedUtc = reader.GetDateTime(10) } });
+                            result.Add(new GetStoreProductsByStoreRow { StoreProduct = new StoreProduct { StoreProductId = reader.GetFieldValue<Guid>(0), StoreName = reader.GetString(1), Barcode = reader.GetString(2), StoreSku = reader.GetString(3), Name = reader.GetString(4), Brand = reader.IsDBNull(5) ? null : reader.GetString(5), ImageUrl = reader.GetString(6), UnitAndSize = reader.IsDBNull(7) ? null : reader.GetString(7), MaxQuantity = reader.IsDBNull(8) ? null : reader.GetDouble(8), IsDeleted = reader.GetBoolean(9), CreatedUtc = reader.GetDateTime(10), LastUpdatedUtc = reader.GetDateTime(11) } });
                         return result;
                     }
                 }
@@ -139,7 +140,7 @@ public class QueriesSql
             {
                 var result = new List<GetStoreProductsByStoreRow>();
                 while (await reader.ReadAsync())
-                    result.Add(new GetStoreProductsByStoreRow { StoreProduct = new StoreProduct { StoreProductId = reader.GetFieldValue<Guid>(0), StoreName = reader.GetString(1), Barcode = reader.GetString(2), Name = reader.GetString(3), Brand = reader.IsDBNull(4) ? null : reader.GetString(4), ImageUrl = reader.GetString(5), UnitAndSize = reader.IsDBNull(6) ? null : reader.GetString(6), MaxQuantity = reader.IsDBNull(7) ? null : reader.GetDouble(7), IsDeleted = reader.GetBoolean(8), CreatedUtc = reader.GetDateTime(9), LastUpdatedUtc = reader.GetDateTime(10) } });
+                    result.Add(new GetStoreProductsByStoreRow { StoreProduct = new StoreProduct { StoreProductId = reader.GetFieldValue<Guid>(0), StoreName = reader.GetString(1), Barcode = reader.GetString(2), StoreSku = reader.GetString(3), Name = reader.GetString(4), Brand = reader.IsDBNull(5) ? null : reader.GetString(5), ImageUrl = reader.GetString(6), UnitAndSize = reader.IsDBNull(7) ? null : reader.GetString(7), MaxQuantity = reader.IsDBNull(8) ? null : reader.GetDouble(8), IsDeleted = reader.GetBoolean(9), CreatedUtc = reader.GetDateTime(10), LastUpdatedUtc = reader.GetDateTime(11) } });
                 return result;
             }
         }
@@ -352,8 +353,8 @@ public class QueriesSql
         return null;
     }
 
-    private const string GetAllProductsSql = "select p.product_id, p.barcode, p.image_url, p.brand, p.name, p.unit_and_size, p.max_quantity, sp.store_name from product p join product_store_product psp on p.product_id = psp.product_id join store_product sp on psp.store_product_id = sp.store_product_id where p.is_deleted = false order by p.product_id asc";
-    public readonly record struct GetAllProductsRow(Guid ProductId, string Barcode, string ImageUrl, string Brand, string Name, string? UnitAndSize, double? MaxQuantity, string StoreName);
+    private const string GetAllProductsSql = "select p.product_id, p.barcode, p.image_url, p.brand, p.name, p.unit_and_size, p.max_quantity, sp.store_sku, sp.store_name from product p join product_store_product psp on p.product_id = psp.product_id join store_product sp on psp.store_product_id = sp.store_product_id where p.is_deleted = false order by p.product_id asc";
+    public readonly record struct GetAllProductsRow(Guid ProductId, string Barcode, string ImageUrl, string Brand, string Name, string? UnitAndSize, double? MaxQuantity, string StoreSku, string StoreName);
     public async Task<List<GetAllProductsRow>> GetAllProducts()
     {
         if (this.Transaction == null)
@@ -366,7 +367,7 @@ public class QueriesSql
                     {
                         var result = new List<GetAllProductsRow>();
                         while (await reader.ReadAsync())
-                            result.Add(new GetAllProductsRow { ProductId = reader.GetFieldValue<Guid>(0), Barcode = reader.GetString(1), ImageUrl = reader.GetString(2), Brand = reader.GetString(3), Name = reader.GetString(4), UnitAndSize = reader.IsDBNull(5) ? null : reader.GetString(5), MaxQuantity = reader.IsDBNull(6) ? null : reader.GetDouble(6), StoreName = reader.GetString(7) });
+                            result.Add(new GetAllProductsRow { ProductId = reader.GetFieldValue<Guid>(0), Barcode = reader.GetString(1), ImageUrl = reader.GetString(2), Brand = reader.GetString(3), Name = reader.GetString(4), UnitAndSize = reader.IsDBNull(5) ? null : reader.GetString(5), MaxQuantity = reader.IsDBNull(6) ? null : reader.GetDouble(6), StoreSku = reader.GetString(7), StoreName = reader.GetString(8) });
                         return result;
                     }
                 }
@@ -383,9 +384,310 @@ public class QueriesSql
             {
                 var result = new List<GetAllProductsRow>();
                 while (await reader.ReadAsync())
-                    result.Add(new GetAllProductsRow { ProductId = reader.GetFieldValue<Guid>(0), Barcode = reader.GetString(1), ImageUrl = reader.GetString(2), Brand = reader.GetString(3), Name = reader.GetString(4), UnitAndSize = reader.IsDBNull(5) ? null : reader.GetString(5), MaxQuantity = reader.IsDBNull(6) ? null : reader.GetDouble(6), StoreName = reader.GetString(7) });
+                    result.Add(new GetAllProductsRow { ProductId = reader.GetFieldValue<Guid>(0), Barcode = reader.GetString(1), ImageUrl = reader.GetString(2), Brand = reader.GetString(3), Name = reader.GetString(4), UnitAndSize = reader.IsDBNull(5) ? null : reader.GetString(5), MaxQuantity = reader.IsDBNull(6) ? null : reader.GetDouble(6), StoreSku = reader.GetString(7), StoreName = reader.GetString(8) });
                 return result;
             }
         }
+    }
+
+    private const string createAppUserSql = "insert into app_user (username, password_hash) values (@username, @password_hash) returning app_user.app_user_id, app_user.username, app_user.password_hash, app_user.is_deleted, app_user.created_utc, app_user.last_updated_utc";
+    public readonly record struct createAppUserRow(AppUser? AppUser);
+    public readonly record struct createAppUserArgs(string Username, string PasswordHash);
+    public async Task<createAppUserRow?> createAppUser(createAppUserArgs args)
+    {
+        if (this.Transaction == null)
+        {
+            using (var connection = NpgsqlDataSource.Create(ConnectionString!))
+            {
+                using (var command = connection.CreateCommand(createAppUserSql))
+                {
+                    command.Parameters.AddWithValue("@username", args.Username);
+                    command.Parameters.AddWithValue("@password_hash", args.PasswordHash);
+                    using (var reader = await command.ExecuteReaderAsync())
+                    {
+                        if (await reader.ReadAsync())
+                        {
+                            return new createAppUserRow
+                            {
+                                AppUser = new AppUser
+                                {
+                                    AppUserId = reader.GetFieldValue<Guid>(0),
+                                    Username = reader.GetString(1),
+                                    PasswordHash = reader.GetString(2),
+                                    IsDeleted = reader.GetBoolean(3),
+                                    CreatedUtc = reader.GetDateTime(4),
+                                    LastUpdatedUtc = reader.GetDateTime(5)
+                                }
+                            };
+                        }
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        if (this.Transaction?.Connection == null || this.Transaction?.Connection.State != System.Data.ConnectionState.Open)
+            throw new InvalidOperationException("Transaction is provided, but its connection is null.");
+        using (var command = this.Transaction.Connection.CreateCommand())
+        {
+            command.CommandText = createAppUserSql;
+            command.Transaction = this.Transaction;
+            command.Parameters.AddWithValue("@username", args.Username);
+            command.Parameters.AddWithValue("@password_hash", args.PasswordHash);
+            using (var reader = await command.ExecuteReaderAsync())
+            {
+                if (await reader.ReadAsync())
+                {
+                    return new createAppUserRow
+                    {
+                        AppUser = new AppUser
+                        {
+                            AppUserId = reader.GetFieldValue<Guid>(0),
+                            Username = reader.GetString(1),
+                            PasswordHash = reader.GetString(2),
+                            IsDeleted = reader.GetBoolean(3),
+                            CreatedUtc = reader.GetDateTime(4),
+                            LastUpdatedUtc = reader.GetDateTime(5)
+                        }
+                    };
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private const string createRefreshTokenSql = "insert into refresh_token (app_user_id, token, expires_utc) values (@app_user_id, @token, @expires_utc) returning refresh_token.app_user_id, refresh_token.token, refresh_token.expires_utc, refresh_token.is_deleted, refresh_token.created_utc, refresh_token.last_updated_utc";
+    public readonly record struct createRefreshTokenRow(RefreshToken? RefreshToken);
+    public readonly record struct createRefreshTokenArgs(Guid AppUserId, string Token, DateTime ExpiresUtc);
+    public async Task<createRefreshTokenRow?> createRefreshToken(createRefreshTokenArgs args)
+    {
+        if (this.Transaction == null)
+        {
+            using (var connection = NpgsqlDataSource.Create(ConnectionString!))
+            {
+                using (var command = connection.CreateCommand(createRefreshTokenSql))
+                {
+                    command.Parameters.AddWithValue("@app_user_id", args.AppUserId);
+                    command.Parameters.AddWithValue("@token", args.Token);
+                    command.Parameters.AddWithValue("@expires_utc", args.ExpiresUtc);
+                    using (var reader = await command.ExecuteReaderAsync())
+                    {
+                        if (await reader.ReadAsync())
+                        {
+                            return new createRefreshTokenRow
+                            {
+                                RefreshToken = new RefreshToken
+                                {
+                                    AppUserId = reader.GetFieldValue<Guid>(0),
+                                    Token = reader.GetString(1),
+                                    ExpiresUtc = reader.GetDateTime(2),
+                                    IsDeleted = reader.GetBoolean(3),
+                                    CreatedUtc = reader.GetDateTime(4),
+                                    LastUpdatedUtc = reader.GetDateTime(5)
+                                }
+                            };
+                        }
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        if (this.Transaction?.Connection == null || this.Transaction?.Connection.State != System.Data.ConnectionState.Open)
+            throw new InvalidOperationException("Transaction is provided, but its connection is null.");
+        using (var command = this.Transaction.Connection.CreateCommand())
+        {
+            command.CommandText = createRefreshTokenSql;
+            command.Transaction = this.Transaction;
+            command.Parameters.AddWithValue("@app_user_id", args.AppUserId);
+            command.Parameters.AddWithValue("@token", args.Token);
+            command.Parameters.AddWithValue("@expires_utc", args.ExpiresUtc);
+            using (var reader = await command.ExecuteReaderAsync())
+            {
+                if (await reader.ReadAsync())
+                {
+                    return new createRefreshTokenRow
+                    {
+                        RefreshToken = new RefreshToken
+                        {
+                            AppUserId = reader.GetFieldValue<Guid>(0),
+                            Token = reader.GetString(1),
+                            ExpiresUtc = reader.GetDateTime(2),
+                            IsDeleted = reader.GetBoolean(3),
+                            CreatedUtc = reader.GetDateTime(4),
+                            LastUpdatedUtc = reader.GetDateTime(5)
+                        }
+                    };
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private const string getRefreshTokenSql = "select refresh_token.app_user_id, refresh_token.token, refresh_token.expires_utc, refresh_token.is_deleted, refresh_token.created_utc, refresh_token.last_updated_utc from refresh_token where app_user_id = @app_user_id and is_deleted = false and expires_utc > now() limit 1";
+    public readonly record struct getRefreshTokenRow(RefreshToken? RefreshToken);
+    public readonly record struct getRefreshTokenArgs(Guid AppUserId);
+    public async Task<getRefreshTokenRow?> getRefreshToken(getRefreshTokenArgs args)
+    {
+        if (this.Transaction == null)
+        {
+            using (var connection = NpgsqlDataSource.Create(ConnectionString!))
+            {
+                using (var command = connection.CreateCommand(getRefreshTokenSql))
+                {
+                    command.Parameters.AddWithValue("@app_user_id", args.AppUserId);
+                    using (var reader = await command.ExecuteReaderAsync())
+                    {
+                        if (await reader.ReadAsync())
+                        {
+                            return new getRefreshTokenRow
+                            {
+                                RefreshToken = new RefreshToken
+                                {
+                                    AppUserId = reader.GetFieldValue<Guid>(0),
+                                    Token = reader.GetString(1),
+                                    ExpiresUtc = reader.GetDateTime(2),
+                                    IsDeleted = reader.GetBoolean(3),
+                                    CreatedUtc = reader.GetDateTime(4),
+                                    LastUpdatedUtc = reader.GetDateTime(5)
+                                }
+                            };
+                        }
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        if (this.Transaction?.Connection == null || this.Transaction?.Connection.State != System.Data.ConnectionState.Open)
+            throw new InvalidOperationException("Transaction is provided, but its connection is null.");
+        using (var command = this.Transaction.Connection.CreateCommand())
+        {
+            command.CommandText = getRefreshTokenSql;
+            command.Transaction = this.Transaction;
+            command.Parameters.AddWithValue("@app_user_id", args.AppUserId);
+            using (var reader = await command.ExecuteReaderAsync())
+            {
+                if (await reader.ReadAsync())
+                {
+                    return new getRefreshTokenRow
+                    {
+                        RefreshToken = new RefreshToken
+                        {
+                            AppUserId = reader.GetFieldValue<Guid>(0),
+                            Token = reader.GetString(1),
+                            ExpiresUtc = reader.GetDateTime(2),
+                            IsDeleted = reader.GetBoolean(3),
+                            CreatedUtc = reader.GetDateTime(4),
+                            LastUpdatedUtc = reader.GetDateTime(5)
+                        }
+                    };
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private const string deleteRefreshTokenSql = "update refresh_token set is_deleted = true where app_user_id = @app_user_id and token = @token";
+    public readonly record struct deleteRefreshTokenArgs(Guid AppUserId, string Token);
+    public async Task deleteRefreshToken(deleteRefreshTokenArgs args)
+    {
+        if (this.Transaction == null)
+        {
+            using (var connection = NpgsqlDataSource.Create(ConnectionString!))
+            {
+                using (var command = connection.CreateCommand(deleteRefreshTokenSql))
+                {
+                    command.Parameters.AddWithValue("@app_user_id", args.AppUserId);
+                    command.Parameters.AddWithValue("@token", args.Token);
+                    await command.ExecuteNonQueryAsync();
+                }
+            }
+
+            return;
+        }
+
+        if (this.Transaction?.Connection == null || this.Transaction?.Connection.State != System.Data.ConnectionState.Open)
+            throw new InvalidOperationException("Transaction is provided, but its connection is null.");
+        using (var command = this.Transaction.Connection.CreateCommand())
+        {
+            command.CommandText = deleteRefreshTokenSql;
+            command.Transaction = this.Transaction;
+            command.Parameters.AddWithValue("@app_user_id", args.AppUserId);
+            command.Parameters.AddWithValue("@token", args.Token);
+            await command.ExecuteNonQueryAsync();
+        }
+    }
+
+    private const string getAppUserSql = "select app_user.app_user_id, app_user.username, app_user.password_hash, app_user.is_deleted, app_user.created_utc, app_user.last_updated_utc from app_user where username = @username and is_deleted = false limit 1";
+    public readonly record struct getAppUserRow(AppUser? AppUser);
+    public readonly record struct getAppUserArgs(string Username);
+    public async Task<getAppUserRow?> getAppUser(getAppUserArgs args)
+    {
+        if (this.Transaction == null)
+        {
+            using (var connection = NpgsqlDataSource.Create(ConnectionString!))
+            {
+                using (var command = connection.CreateCommand(getAppUserSql))
+                {
+                    command.Parameters.AddWithValue("@username", args.Username);
+                    using (var reader = await command.ExecuteReaderAsync())
+                    {
+                        if (await reader.ReadAsync())
+                        {
+                            return new getAppUserRow
+                            {
+                                AppUser = new AppUser
+                                {
+                                    AppUserId = reader.GetFieldValue<Guid>(0),
+                                    Username = reader.GetString(1),
+                                    PasswordHash = reader.GetString(2),
+                                    IsDeleted = reader.GetBoolean(3),
+                                    CreatedUtc = reader.GetDateTime(4),
+                                    LastUpdatedUtc = reader.GetDateTime(5)
+                                }
+                            };
+                        }
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        if (this.Transaction?.Connection == null || this.Transaction?.Connection.State != System.Data.ConnectionState.Open)
+            throw new InvalidOperationException("Transaction is provided, but its connection is null.");
+        using (var command = this.Transaction.Connection.CreateCommand())
+        {
+            command.CommandText = getAppUserSql;
+            command.Transaction = this.Transaction;
+            command.Parameters.AddWithValue("@username", args.Username);
+            using (var reader = await command.ExecuteReaderAsync())
+            {
+                if (await reader.ReadAsync())
+                {
+                    return new getAppUserRow
+                    {
+                        AppUser = new AppUser
+                        {
+                            AppUserId = reader.GetFieldValue<Guid>(0),
+                            Username = reader.GetString(1),
+                            PasswordHash = reader.GetString(2),
+                            IsDeleted = reader.GetBoolean(3),
+                            CreatedUtc = reader.GetDateTime(4),
+                            LastUpdatedUtc = reader.GetDateTime(5)
+                        }
+                    };
+                }
+            }
+        }
+
+        return null;
     }
 }

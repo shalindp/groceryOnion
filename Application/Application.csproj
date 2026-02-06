@@ -8,7 +8,9 @@
 
     <ItemGroup>
       <PackageReference Include="FuzzySharp" Version="2.0.2" />
+      <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.12" />
       <PackageReference Include="PuppeteerSharp" Version="20.2.5" />
+      <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.15.0" />
     </ItemGroup>
 
     <ItemGroup>

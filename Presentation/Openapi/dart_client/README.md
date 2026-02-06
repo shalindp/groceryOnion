@@ -68,10 +68,11 @@ Class | Method | HTTP request | Description
 
 ## Documentation For Models
 
- - [CanonicalProduct](doc//CanonicalProduct.md)
  - [Categoery](doc//Categoery.md)
  - [CreateSessionWithRegionId](doc//CreateSessionWithRegionId.md)
  - [CreateSessionWithRegionResponse](doc//CreateSessionWithRegionResponse.md)
+ - [PricingUrlResponse](doc//PricingUrlResponse.md)
+ - [ProductResponse](doc//ProductResponse.md)
  - [StoreName](doc//StoreName.md)
  - [WoolworthsGetRegionsResult](doc//WoolworthsGetRegionsResult.md)
 

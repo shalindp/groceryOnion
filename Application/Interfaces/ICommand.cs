@@ -2,7 +2,7 @@
 
 public interface ICommand<T, K>
 {
-    public Task<T> SendAsync(K requestBody);
+    public Task<T> SendAsync(K request);
 }
 
 public interface ICommand<T>

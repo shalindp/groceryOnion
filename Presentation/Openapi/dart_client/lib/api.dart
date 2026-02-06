@@ -31,10 +31,11 @@ part 'auth/http_bearer_auth.dart';
 part 'api/product_api.dart';
 part 'api/region_api.dart';
 
-part 'model/canonical_product.dart';
 part 'model/categoery.dart';
 part 'model/create_session_with_region_id.dart';
 part 'model/create_session_with_region_response.dart';
+part 'model/pricing_url_response.dart';
+part 'model/product_response.dart';
 part 'model/store_name.dart';
 part 'model/woolworths_get_regions_result.dart';
 

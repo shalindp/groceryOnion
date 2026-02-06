@@ -1,6 +1,7 @@
 -- name: CreateProducts :copyfrom
-insert into store_product (store_name, barcode, name, brand, image_url, max_quantity, image_url, unit_and_size)
-values (@store_name, @barcode, @name, @brand, @image_url, @max_quantity, @image_url, @unit_and_size);
+insert into store_product (store_name, barcode, name, brand, image_url, max_quantity, image_url, unit_and_size,
+                           store_sku)
+values (@store_name, @barcode, @name, @brand, @image_url, @max_quantity, @image_url, @unit_and_size, @store_sku);
 
 -- name: GetStoreProducts :many
 select sqlc.embed(store_product)
@@ -52,6 +53,7 @@ select p.product_id,
        p.name,
        p.unit_and_size,
        p.max_quantity,
+       sp.store_sku,
        sp.store_name
 from product p
          join product_store_product psp on p.product_id = psp.product_id
@@ -59,3 +61,33 @@ from product p
 where p.is_deleted = false
 order by p.product_id asc;
 
+
+-- name: createAppUser :one
+insert into app_user (username, password_hash)
+values (@username, @password_hash)
+returning sqlc.embed(app_user);
+
+-- name: createRefreshToken :one
+insert into refresh_token (app_user_id, token, expires_utc)
+values (@app_user_id, @token, @expires_utc)
+returning sqlc.embed(refresh_token);
+
+-- name: getRefreshToken :one
+select sqlc.embed(refresh_token)
+from refresh_token
+where app_user_id = @app_user_id
+  and is_deleted = false
+  and expires_utc > now()
+limit 1;
+
+-- name: deleteRefreshToken :exec
+update refresh_token
+set is_deleted = true
+where app_user_id = @app_user_id and token = @token;
+
+-- name: getAppUser :one
+select sqlc.embed(app_user)
+from app_user
+where username = @username
+  and is_deleted = false
+limit 1;
