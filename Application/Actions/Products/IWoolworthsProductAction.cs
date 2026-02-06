@@ -113,7 +113,7 @@ public class WoolworthsProductAction : IWoolworthsProductAction
         {
             return item.Size.VolumesSize;
         }
-        else if(!string.IsNullOrEmpty(item.Size.CupMeasure))
+        else if (!string.IsNullOrEmpty(item.Size.CupMeasure))
         {
             return item.Size.CupMeasure;
         }
@@ -132,20 +132,31 @@ public class WoolworthsProductAction : IWoolworthsProductAction
     // }
 
     private record ProductPriceResponse(PriceResponse Price);
+
     public async Task<double> GetProductPriceAsync(string storeSku, WoolworthsSession session)
     {
+        Console.WriteLine($"@> START {storeSku} - {session.AddressId}");
         var url = $"https://www.woolworths.co.nz/api/v1/products/{storeSku}";
 
         var headers = new Dictionary<string, string>
+            {
+                ["ASP.NET_SessionId"] = session.SessionId,
+                ["aga"] = session.Aga,
+            }.Concat(Headers.WoolworthsDefaultHeaders)
+            .ToDictionary(k => k.Key, v => v.Value);
+
+        try
         {
-            ["ASP.NET_SessionId"] = session.SessionId,
-            ["aga"] = session.Aga,
-        }.Concat(Headers.WoolworthsDefaultHeaders)
-        .ToDictionary(k => k.Key, v => v.Value);
+            var result = await _httpHelper.GetAsync<ProductPriceResponse>(url, headers: headers);
+            Console.WriteLine($"@> END {storeSku} - {session.AddressId}");
+            return result.Body!.Price.OriginalPrice;
+        }
+        catch (Exception e)
+        {
+            Environment.FailFast("Critical unrecoverable error", e);
+        }
 
-        var result = await _httpHelper.GetAsync<ProductPriceResponse>(url, headers: headers);
-
-        return result.Body!.Price.OriginalPrice;
+        return 0.0;
     }
 
     public async Task SyncProductsAsync()
@@ -203,7 +214,7 @@ public class WoolworthsProductAction : IWoolworthsProductAction
         {
             throw new Exception($"{StoreName.Woolworths.ToDescription()} Too many products with empty barcode, likely an error in fetching products");
         }
-        
+
         await _dbContext.Queries.CreateProducts([
             ..productsToInsert.Select(c =>
                 new QueriesSql.CreateProductsArgs

@@ -1,6 +1,7 @@
 ﻿using Application.Actions.Products;
 using Application.Enums;
 using Application.Interfaces;
+using Application.Services;
 using Persistence;
 
 namespace Application.Queries;
@@ -27,11 +28,13 @@ public class GetProductsPricingQuery : IQuery<GetProductsPricingQueryResponse, G
 {
     private readonly INpgsqlDbContext _dbContext;
     private readonly IWoolworthsProductAction _woolworthsProductAction;
+    private readonly IWoolworthsThrottleService _woolworthsThrottleService;
 
-    public GetProductsPricingQuery(INpgsqlDbContext dbContext, IWoolworthsProductAction woolworthsProductAction)
+    public GetProductsPricingQuery(INpgsqlDbContext dbContext, IWoolworthsProductAction woolworthsProductAction, IWoolworthsThrottleService woolworthsThrottleService)
     {
         _dbContext = dbContext;
         _woolworthsProductAction = woolworthsProductAction;
+        _woolworthsThrottleService = woolworthsThrottleService;
     }
 
     public async Task<GetProductsPricingQueryResponse> SendAsync(GetProductsPricingQueryRequest request)
@@ -47,11 +50,13 @@ public class GetProductsPricingQuery : IQuery<GetProductsPricingQueryResponse, G
             foreach (var productIdAndStoreSku in request.ProductIdAndStoreSkus)
             {
                 var woolworthsSession = woolworthsSessions.First(c => c?.AddressId == woolworthsStoreId)!.Value;
-                var woolworthTask = _woolworthsProductAction.GetProductPriceAsync(productIdAndStoreSku.StoreSku, woolworthsSession);
+                var woolworthTask = _woolworthsThrottleService.ExecuteAsync(() => _woolworthsProductAction.GetProductPriceAsync(productIdAndStoreSku.StoreSku, woolworthsSession));
+                // var woolworthTask = _woolworthsProductAction.GetProductPriceAsync(productIdAndStoreSku.StoreSku, woolworthsSession);
                 woolworthTasks.Add(woolworthTask);
             }
         }
 
+        // var x = await _woolworthsThrottleService.ExecuteAsync(() => Task.WhenAll(woolworthTasks));
         var x = await Task.WhenAll(woolworthTasks);
 
         return new GetProductsPricingQueryResponse();

@@ -13,7 +13,7 @@ using Presentation.Responses.Product;
 namespace Presentation.Controllers;
 
 [ApiController]
-[Authorize]
+// [Authorize]
 [Route("[controller]")]
 public class ProductController : ControllerBase
 {

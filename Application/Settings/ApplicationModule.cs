@@ -16,6 +16,7 @@ public static class ApplicationModule
     public static void AddToService(IServiceCollection services)
     {
         services.AddSingleton<ICacheService, CacheService>();
+        services.AddSingleton<IWoolworthsThrottleService>(new WoolworthsThrottleService(1));
         services.AddScoped<JwtAuthenticationService>();
 
         services.AddScoped<IUserContext, UserContext>();
