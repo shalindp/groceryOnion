@@ -31,10 +31,10 @@ public class CreateStoreSessionsQuery : IQuery<CreateStoreSessionsQueryResponse,
         _woolworthsRegionAction = woolworthsRegionAction;
     }
 
-    public async Task<CreateStoreSessionsQueryResponse> SendAsync(CreateStoreSessionsQueryRequest queryRequestBody)
+    public async Task<CreateStoreSessionsQueryResponse> SendAsync(CreateStoreSessionsQueryRequest request)
     {
         var woolworthsSessionRegions =
-            await _woolworthsRegionAction.CreateSessionWithRegionsAsync(queryRequestBody.WoolworthsStoresAddressIds);
+            await _woolworthsRegionAction.CreateSessionWithRegionsAsync(request.WoolworthsStoresAddressIds);
         
         var paknSaveAccessToken = await _paknSaveProductAction.CreateAccessTokenAsync();
         

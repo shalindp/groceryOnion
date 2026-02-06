@@ -1,5 +1,4 @@
-﻿using System.Security.Claims;
-using Application.Actions.Products;
+﻿using Application.Actions.Products;
 using Application.Actions.Regions;
 using Application.Actions.User;
 using Application.Enums;

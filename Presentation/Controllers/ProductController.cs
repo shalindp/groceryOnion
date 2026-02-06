@@ -6,7 +6,9 @@ using Application.Queries;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Presentation.Mappers;
+using Presentation.Requests.Product;
 using Presentation.Responses;
+using Presentation.Responses.Product;
 
 namespace Presentation.Controllers;
 
@@ -20,16 +22,18 @@ public class ProductController : ControllerBase
     private readonly SyncStoreProductsCommand _syncStoreProductsCommand;
     private readonly SyncCanonicalProductsCommand _syncCanonicalProductsCommand;
     private readonly SearchProductsQuery _searchProductsQuery;
+    private readonly GetProductsPricingQuery _getProductsPricingQuery;
 
     public ProductController(IWoolworthsProductAction woolworthsProductAction, IProductMapper mapper,
         SyncStoreProductsCommand syncStoreProductsCommand, SyncCanonicalProductsCommand syncCanonicalProductsCommand,
-        SearchProductsQuery searchProductsQuery)
+        SearchProductsQuery searchProductsQuery, GetProductsPricingQuery getProductsPricingQuery)
     {
         _woolworthsProductAction = woolworthsProductAction;
         _mapper = mapper;
         _syncStoreProductsCommand = syncStoreProductsCommand;
         _syncCanonicalProductsCommand = syncCanonicalProductsCommand;
         _searchProductsQuery = searchProductsQuery;
+        _getProductsPricingQuery = getProductsPricingQuery;
     }
 
     [HttpGet("categories", Name = nameof(GetCategories))]
@@ -63,5 +67,12 @@ public class ProductController : ControllerBase
     {
         var result = await _searchProductsQuery.SendAsync(new SearchProductsQueryRequest { Term = term, Limit = limit, Skip = skip });
         return _mapper.Map(result.Data!.Products);
+    }
+    
+    [HttpPost("price", Name = nameof(ProductPriceAsync))]
+    public async Task<GetProductsPricingResponse> ProductPriceAsync([FromBody] GetProductsPricingRequest request)
+    {
+        var result = await _getProductsPricingQuery.SendAsync(_mapper.Map(request));
+        return _mapper.Map(result);
     }
 }

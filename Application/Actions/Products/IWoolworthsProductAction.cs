@@ -11,6 +11,7 @@ public interface IWoolworthsProductAction
     public Task SyncProductsAsync();
 
     public Task<IList<Categoery>> GetAllCategoriesAsync();
+    public Task<double> GetProductPriceAsync(string storeSku, WoolworthsSession session);
 }
 
 public class WoolworthsProductAction : IWoolworthsProductAction
@@ -129,6 +130,23 @@ public class WoolworthsProductAction : IWoolworthsProductAction
     //
     //     return result.Select(c => ProductDto.Map(c.CanonicalProduct!.Value!)).ToList();
     // }
+
+    private record ProductPriceResponse(PriceResponse Price);
+    public async Task<double> GetProductPriceAsync(string storeSku, WoolworthsSession session)
+    {
+        var url = $"https://www.woolworths.co.nz/api/v1/products/{storeSku}";
+
+        var headers = new Dictionary<string, string>
+        {
+            ["ASP.NET_SessionId"] = session.SessionId,
+            ["aga"] = session.Aga,
+        }.Concat(Headers.WoolworthsDefaultHeaders)
+        .ToDictionary(k => k.Key, v => v.Value);
+
+        var result = await _httpHelper.GetAsync<ProductPriceResponse>(url, headers: headers);
+
+        return result.Body!.Price.OriginalPrice;
+    }
 
     public async Task SyncProductsAsync()
     {

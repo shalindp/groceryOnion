@@ -15,6 +15,9 @@ public static class ApplicationModule
 {
     public static void AddToService(IServiceCollection services)
     {
+        services.AddSingleton<ICacheService, CacheService>();
+        services.AddScoped<JwtAuthenticationService>();
+
         services.AddScoped<IUserContext, UserContext>();
         services.AddScoped<IWoolworthsRegionAction, WoolworthsRegionAction>();
         services.AddScoped<IWoolworthsProductAction, WoolworthsProductAction>();
@@ -29,7 +32,6 @@ public static class ApplicationModule
         services.AddScoped<CreateStoreSessionsQuery>();
         services.AddScoped<RefreshTokenQuery>();
         services.AddScoped<SelectStoresCommand>();
-
-        services.AddScoped<JwtAuthenticationService>();
+        services.AddScoped<GetProductsPricingQuery>();
     }
 }

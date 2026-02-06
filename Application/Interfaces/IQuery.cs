@@ -2,5 +2,5 @@
 
 public interface IQuery<T, K>
 {
-    public Task<T> SendAsync(K requestBody);
+    public Task<T> SendAsync(K request);
 }

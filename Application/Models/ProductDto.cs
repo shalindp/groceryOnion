@@ -6,6 +6,8 @@ public class ProductDto
 {
     public Guid ProductId { get; set; }
     public string Barcode { get; set; }
+    
+    public string StoreSku { get; set; }
     public string Name { get; set; }
     public string Brand { get; set; }
     public StoreName StoreType { get; set; }

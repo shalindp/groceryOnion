@@ -1,6 +1,7 @@
 ﻿using Application.Enums;
 using Application.Interfaces;
 using Application.Models;
+using Application.Services;
 using FuzzySharp;
 using Persistence;
 
@@ -21,23 +22,25 @@ public record SearchProductsQueryResult
 public class SearchProductsQuery : IQuery<Result<SearchProductsQueryResult>, SearchProductsQueryRequest>
 {
     private readonly INpgsqlDbContext _dbContext;
+    private readonly ICacheService _cacheService;
     private const int MinimumFuzzyScore = 60; // Minimum score to include a product in results
 
-    public SearchProductsQuery(INpgsqlDbContext dbContext)
+    public SearchProductsQuery(INpgsqlDbContext dbContext, ICacheService cacheService)
     {
         _dbContext = dbContext;
+        _cacheService = cacheService;
     }
 
-    public async Task<Result<SearchProductsQueryResult>> SendAsync(SearchProductsQueryRequest requestBody)
+    public async Task<Result<SearchProductsQueryResult>> SendAsync(SearchProductsQueryRequest request)
     {
         try
         {
-            if (string.IsNullOrWhiteSpace(requestBody.Term))
+            if (string.IsNullOrWhiteSpace(request.Term))
             {
                 return Result<SearchProductsQueryResult>.Failure("Search term cannot be empty");
             }
 
-            var allProducts = await _dbContext.Queries.GetAllProducts();
+            var allProducts = await _cacheService.GetCachedAllProductsWithCacheAsync(_dbContext.Queries.GetAllProducts);
 
             // Group products by ProductId to consolidate store information
             var productGroups = allProducts
@@ -49,14 +52,14 @@ public class SearchProductsQuery : IQuery<Result<SearchProductsQueryResult>, Sea
                 .Select(group =>
                 {
                     var firstProduct = group.First();
-                    
+
                     // Calculate fuzzy scores for name and brand
-                    var nameScore = Fuzz.PartialRatio(requestBody.Term, firstProduct.Name);
-                    var brandScore = Fuzz.PartialRatio(requestBody.Term, firstProduct.Brand ?? "");
-                    
+                    var nameScore = Fuzz.PartialRatio(request.Term, firstProduct.Name);
+                    var brandScore = Fuzz.PartialRatio(request.Term, firstProduct.Brand ?? "");
+
                     // Weight: Name matches are weighted more heavily
                     var weightedScore = (nameScore * 0.7) + (brandScore * 0.3);
-                    
+
                     return new
                     {
                         Product = firstProduct,
@@ -67,8 +70,8 @@ public class SearchProductsQuery : IQuery<Result<SearchProductsQueryResult>, Sea
                 .Where(x => x.Score >= MinimumFuzzyScore)
                 .OrderByDescending(x => x.Score)
                 .ThenBy(x => x.Product.Name)
-                .Skip(requestBody.Skip)
-                .Take(requestBody.Limit)
+                .Skip(request.Skip)
+                .Take(request.Limit)
                 .ToList();
 
             // Build ProductDto with PricingUrls for each store
@@ -87,6 +90,7 @@ public class SearchProductsQuery : IQuery<Result<SearchProductsQueryResult>, Sea
                     {
                         ProductId = result.Product.ProductId,
                         Barcode = result.Product.Barcode,
+                        StoreSku = result.Product.StoreSku,
                         Name = result.Product.Name,
                         Brand = result.Product.Brand,
                         StoreType = ParseStoreName(result.Stores.First()),
