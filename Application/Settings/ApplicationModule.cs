@@ -1,6 +1,8 @@
 ﻿using Application.Actions.Products;
 using Application.Actions.Regions;
+using Application.Actions.User;
 using Application.Commands.Products;
+using Application.Commands.Stores;
 using Application.Commands.User;
 using Application.Queries;
 using Application.Queries.User;
@@ -13,10 +15,11 @@ public static class ApplicationModule
 {
     public static void AddToService(IServiceCollection services)
     {
-        services.AddTransient<IWoolworthsRegionAction, WoolworthsRegionAction>();
-        services.AddTransient<IWoolworthsProductAction, WoolworthsProductAction>();
-        services.AddTransient<IPaknSaveProductAction, PaknSaveProductAction>();
-        services.AddTransient<ICanonicalProductSyncAction, CanonicalProductSyncAction>();
+        services.AddScoped<IUserContext, UserContext>();
+        services.AddScoped<IWoolworthsRegionAction, WoolworthsRegionAction>();
+        services.AddScoped<IWoolworthsProductAction, WoolworthsProductAction>();
+        services.AddScoped<IPaknSaveProductAction, PaknSaveProductAction>();
+        services.AddScoped<ICanonicalProductSyncAction, CanonicalProductSyncAction>();
 
         services.AddScoped<SignInQuery>();
         services.AddScoped<CreateUserCommand>();
@@ -25,6 +28,7 @@ public static class ApplicationModule
         services.AddScoped<SearchProductsQuery>();
         services.AddScoped<CreateStoreSessionsQuery>();
         services.AddScoped<RefreshTokenQuery>();
+        services.AddScoped<SelectStoresCommand>();
 
         services.AddScoped<JwtAuthenticationService>();
     }

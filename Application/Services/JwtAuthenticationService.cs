@@ -63,7 +63,8 @@ public class JwtAuthenticationService
         var tokenExpiryTimestamp = DateTime.UtcNow.AddMinutes(tokenValidityInMinutes);
 
         var token = new JwtSecurityToken(issuer, audience, [
-                new Claim(JwtRegisteredClaimNames.Name, appUser.Username),
+                new Claim(ClaimTypes.NameIdentifier, appUser.AppUserId.ToString()),
+                new Claim(ClaimTypes.Name, appUser.Username),
             ], expires: tokenExpiryTimestamp,
             signingCredentials: new SigningCredentials(new SymmetricSecurityKey(secretKey),
                 SecurityAlgorithms.HmacSha512Signature));

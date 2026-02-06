@@ -4,7 +4,9 @@ drop table if exists product;
 drop table if exists store_product;
 drop table if exists refresh_token;
 drop table if exists app_user;
-
+drop table if exists woolworths_session;
+drop table if exists paknsave_session;
+drop table if exists selected_stores;
 
 create table product
 (
@@ -62,7 +64,7 @@ create table product_store_product
 create table app_user
 (
     app_user_id      uuid primary key      default uuid_generate_v4(),
-    username            varchar(255) not null unique,
+    username         varchar(255) not null unique,
     password_hash    varchar(255) not null,
 
     is_deleted       boolean      not null default false,
@@ -88,3 +90,30 @@ create table refresh_token
         on delete cascade
 );
 
+create table selected_stores
+(
+    app_user_id uuid         not null,
+    store_name  varchar(200) not null,
+    store_id    varchar(255) not null,
+    is_active   boolean      not null default true,
+
+    constraint fk_userId foreign key (app_user_id)
+        references app_user (app_user_id)
+        on delete cascade,
+
+    constraint storeNameCheck check (store_name in ('woolworths', 'paknsave', 'newworld'))
+);
+
+create table woolworths_session
+(
+    address_id  int          not null,
+    session_id  varchar(255) not null,
+    aga         varchar(255) not null,
+    expires_utc timestamptz  not null
+);
+
+create table paknsave_session
+(
+    access_token varchar(255) not null,
+    expires_utc  timestamptz  not null
+);

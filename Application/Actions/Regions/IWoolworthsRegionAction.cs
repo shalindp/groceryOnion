@@ -72,7 +72,8 @@ public class WoolworthsRegionAction : IWoolworthsRegionAction
             StoreName = StoreName.Woolworths,
             Address = result.Body!.Context.Fulfilment.Address,
             SessionId = sessionId!,
-            Aga = aga!
+            Aga = aga!,
+            AddressId = addressId,
         };
     }
 

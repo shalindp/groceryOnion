@@ -690,4 +690,208 @@ public class QueriesSql
 
         return null;
     }
+
+    private const string createWoolworthsSessionSql = "COPY woolworths_session (session_id, aga, address_id, expires_utc) FROM STDIN (FORMAT BINARY)";
+    public readonly record struct createWoolworthsSessionArgs(string SessionId, string Aga, int AddressId, DateTime ExpiresUtc);
+    public async Task createWoolworthsSession(List<createWoolworthsSessionArgs> args)
+    {
+        using (var connection = new NpgsqlConnection(ConnectionString))
+        {
+            await connection.OpenAsync();
+            using (var writer = await connection.BeginBinaryImportAsync(createWoolworthsSessionSql))
+            {
+                foreach (var row in args)
+                {
+                    await writer.StartRowAsync();
+                    await writer.WriteAsync(row.SessionId);
+                    await writer.WriteAsync(row.Aga);
+                    await writer.WriteAsync(row.AddressId);
+                    await writer.WriteAsync(row.ExpiresUtc);
+                }
+
+                await writer.CompleteAsync();
+            }
+
+            await connection.CloseAsync();
+        }
+    }
+
+    private const string getWoolworthsSessionSql = "select woolworths_session.address_id, woolworths_session.session_id, woolworths_session.aga, woolworths_session.expires_utc from woolworths_session where address_id = any(@address_ids::int[]) and expires_utc > now() order by expires_utc asc";
+    public readonly record struct getWoolworthsSessionRow(WoolworthsSession? WoolworthsSession);
+    public readonly record struct getWoolworthsSessionArgs(int[] AddressIds);
+    public async Task<List<getWoolworthsSessionRow>> getWoolworthsSession(getWoolworthsSessionArgs args)
+    {
+        if (this.Transaction == null)
+        {
+            using (var connection = NpgsqlDataSource.Create(ConnectionString!))
+            {
+                using (var command = connection.CreateCommand(getWoolworthsSessionSql))
+                {
+                    command.Parameters.AddWithValue("@address_ids", args.AddressIds);
+                    using (var reader = await command.ExecuteReaderAsync())
+                    {
+                        var result = new List<getWoolworthsSessionRow>();
+                        while (await reader.ReadAsync())
+                            result.Add(new getWoolworthsSessionRow { WoolworthsSession = new WoolworthsSession { AddressId = reader.GetInt32(0), SessionId = reader.GetString(1), Aga = reader.GetString(2), ExpiresUtc = reader.GetDateTime(3) } });
+                        return result;
+                    }
+                }
+            }
+        }
+
+        if (this.Transaction?.Connection == null || this.Transaction?.Connection.State != System.Data.ConnectionState.Open)
+            throw new InvalidOperationException("Transaction is provided, but its connection is null.");
+        using (var command = this.Transaction.Connection.CreateCommand())
+        {
+            command.CommandText = getWoolworthsSessionSql;
+            command.Transaction = this.Transaction;
+            command.Parameters.AddWithValue("@address_ids", args.AddressIds);
+            using (var reader = await command.ExecuteReaderAsync())
+            {
+                var result = new List<getWoolworthsSessionRow>();
+                while (await reader.ReadAsync())
+                    result.Add(new getWoolworthsSessionRow { WoolworthsSession = new WoolworthsSession { AddressId = reader.GetInt32(0), SessionId = reader.GetString(1), Aga = reader.GetString(2), ExpiresUtc = reader.GetDateTime(3) } });
+                return result;
+            }
+        }
+    }
+
+    private const string createPaknSaveSessionSql = "insert into paknsave_session (access_token, expires_utc) values (@access_token, @expires_utc) returning paknsave_session.access_token, paknsave_session.expires_utc";
+    public readonly record struct createPaknSaveSessionRow(PaknsaveSession? PaknsaveSession);
+    public readonly record struct createPaknSaveSessionArgs(string AccessToken, DateTime ExpiresUtc);
+    public async Task<createPaknSaveSessionRow?> createPaknSaveSession(createPaknSaveSessionArgs args)
+    {
+        if (this.Transaction == null)
+        {
+            using (var connection = NpgsqlDataSource.Create(ConnectionString!))
+            {
+                using (var command = connection.CreateCommand(createPaknSaveSessionSql))
+                {
+                    command.Parameters.AddWithValue("@access_token", args.AccessToken);
+                    command.Parameters.AddWithValue("@expires_utc", args.ExpiresUtc);
+                    using (var reader = await command.ExecuteReaderAsync())
+                    {
+                        if (await reader.ReadAsync())
+                        {
+                            return new createPaknSaveSessionRow
+                            {
+                                PaknsaveSession = new PaknsaveSession
+                                {
+                                    AccessToken = reader.GetString(0),
+                                    ExpiresUtc = reader.GetDateTime(1)
+                                }
+                            };
+                        }
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        if (this.Transaction?.Connection == null || this.Transaction?.Connection.State != System.Data.ConnectionState.Open)
+            throw new InvalidOperationException("Transaction is provided, but its connection is null.");
+        using (var command = this.Transaction.Connection.CreateCommand())
+        {
+            command.CommandText = createPaknSaveSessionSql;
+            command.Transaction = this.Transaction;
+            command.Parameters.AddWithValue("@access_token", args.AccessToken);
+            command.Parameters.AddWithValue("@expires_utc", args.ExpiresUtc);
+            using (var reader = await command.ExecuteReaderAsync())
+            {
+                if (await reader.ReadAsync())
+                {
+                    return new createPaknSaveSessionRow
+                    {
+                        PaknsaveSession = new PaknsaveSession
+                        {
+                            AccessToken = reader.GetString(0),
+                            ExpiresUtc = reader.GetDateTime(1)
+                        }
+                    };
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private const string getPaknSaveSessionSql = "select paknsave_session.access_token, paknsave_session.expires_utc from paknsave_session where expires_utc > now() limit 1";
+    public readonly record struct getPaknSaveSessionRow(PaknsaveSession? PaknsaveSession);
+    public async Task<getPaknSaveSessionRow?> getPaknSaveSession()
+    {
+        if (this.Transaction == null)
+        {
+            using (var connection = NpgsqlDataSource.Create(ConnectionString!))
+            {
+                using (var command = connection.CreateCommand(getPaknSaveSessionSql))
+                {
+                    using (var reader = await command.ExecuteReaderAsync())
+                    {
+                        if (await reader.ReadAsync())
+                        {
+                            return new getPaknSaveSessionRow
+                            {
+                                PaknsaveSession = new PaknsaveSession
+                                {
+                                    AccessToken = reader.GetString(0),
+                                    ExpiresUtc = reader.GetDateTime(1)
+                                }
+                            };
+                        }
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        if (this.Transaction?.Connection == null || this.Transaction?.Connection.State != System.Data.ConnectionState.Open)
+            throw new InvalidOperationException("Transaction is provided, but its connection is null.");
+        using (var command = this.Transaction.Connection.CreateCommand())
+        {
+            command.CommandText = getPaknSaveSessionSql;
+            command.Transaction = this.Transaction;
+            using (var reader = await command.ExecuteReaderAsync())
+            {
+                if (await reader.ReadAsync())
+                {
+                    return new getPaknSaveSessionRow
+                    {
+                        PaknsaveSession = new PaknsaveSession
+                        {
+                            AccessToken = reader.GetString(0),
+                            ExpiresUtc = reader.GetDateTime(1)
+                        }
+                    };
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private const string addSelectedStoreSql = "COPY selected_stores (app_user_id, store_name, store_id) FROM STDIN (FORMAT BINARY)";
+    public readonly record struct addSelectedStoreArgs(Guid AppUserId, string StoreName, string StoreId);
+    public async Task addSelectedStore(List<addSelectedStoreArgs> args)
+    {
+        using (var connection = new NpgsqlConnection(ConnectionString))
+        {
+            await connection.OpenAsync();
+            using (var writer = await connection.BeginBinaryImportAsync(addSelectedStoreSql))
+            {
+                foreach (var row in args)
+                {
+                    await writer.StartRowAsync();
+                    await writer.WriteAsync(row.AppUserId);
+                    await writer.WriteAsync(row.StoreName);
+                    await writer.WriteAsync(row.StoreId);
+                }
+
+                await writer.CompleteAsync();
+            }
+
+            await connection.CloseAsync();
+        }
+    }
 }

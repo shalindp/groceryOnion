@@ -43,10 +43,13 @@ builder.Services.AddAuthentication(options =>
         ValidateAudience = true,
         ValidateLifetime = true,
         ValidateIssuerSigningKey = true,
+        NameClaimType = System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.UniqueName,
+        RoleClaimType = System.Security.Claims.ClaimTypes.Role,
     };
 });
 builder.Services.AddAuthorization();
 
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IHttpHelper, HttpHelper>();
 
 
@@ -56,6 +59,7 @@ ApplicationModule.AddToService(builder.Services);
 builder.Services.AddSingleton<IProductMapper, ProductMapper>();
 builder.Services.AddSingleton<IRegionMapper, RegionMapper>();
 builder.Services.AddSingleton<IUserMapper, UserMapper>();
+builder.Services.AddSingleton<IStoreMapper, StoreMapper>();
 
 
 var app = builder.Build();

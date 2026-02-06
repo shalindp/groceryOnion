@@ -83,7 +83,8 @@ limit 1;
 -- name: deleteRefreshToken :exec
 update refresh_token
 set is_deleted = true
-where app_user_id = @app_user_id and token = @token;
+where app_user_id = @app_user_id
+  and token = @token;
 
 -- name: getAppUser :one
 select sqlc.embed(app_user)
@@ -91,3 +92,29 @@ from app_user
 where username = @username
   and is_deleted = false
 limit 1;
+
+-- name: createWoolworthsSession :copyfrom
+insert into woolworths_session (session_id, aga, address_id, expires_utc)
+values (@session_id, @aga, @address_id, @expires_utc);
+
+-- name: getWoolworthsSession :many
+select sqlc.embed(woolworths_session)
+from woolworths_session
+where address_id = any(@address_ids::int[])
+  and expires_utc > now() 
+order by expires_utc asc;
+
+-- name: createPaknSaveSession :one
+insert into paknsave_session (access_token, expires_utc)
+values (@access_token, @expires_utc)
+returning sqlc.embed(paknsave_session);
+
+-- name: getPaknSaveSession :one
+select sqlc.embed(paknsave_session)
+from paknsave_session
+where  expires_utc > now()
+limit 1;
+
+-- name: addSelectedStore :copyfrom
+insert into selected_stores (app_user_id, store_name, store_id)
+values (@app_user_id, @store_name, @store_id);
