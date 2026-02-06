@@ -48,7 +48,7 @@ public class JwtAuthenticationService
         }
         
         await _dbContext.Queries.deleteRefreshToken(
-            new QueriesSql.deleteRefreshTokenArgs(appUser.Value.AppUserId, refreshToken));
+            new QueriesSql.deleteRefreshTokenArgs(appUser.Value.AppUserId, existingRefreshToken.Value.Token));
         
         
         return await GenerateJwtTokenAsync(appUser.Value);

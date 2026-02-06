@@ -4,13 +4,19 @@ using Persistence;
 
 namespace Application.Commands.User;
 
-public record CreateUserCommandRequest(string Username, string Password);
+public record CreateUserCommandRequest
+{
+    public string Username { get; init; }
+    public string Password { get; init; }
+}
 
-public record CreateUserCommandResponse(
-    string Username,
-    string Token,
-    string RefreshToken,
-    int TokenExpirationInSeconds);
+public record CreateUserCommandResponse
+{
+    public string Username { get; init; }
+    public string Token { get; init; }
+    public string RefreshToken { get; init; }
+    public int TokenExpirationInSeconds { get; init; }
+}
 
 public class CreateUserCommand : ICommand<CreateUserCommandResponse, CreateUserCommandRequest>
 {
@@ -37,7 +43,12 @@ public class CreateUserCommand : ICommand<CreateUserCommandResponse, CreateUserC
             await _authenticationService.AuthenticateUser(
                 new AuthenticationServiceRequest(user.Value.Username, user.Value.PasswordHash));
 
-        return new CreateUserCommandResponse(result.Username, result.Token, result.RefreshToken,
-            result.TokenExpirationInSeconds);
+        return new CreateUserCommandResponse
+        {
+            Username = result.Username,
+            Token = result.Token,
+            RefreshToken = result.RefreshToken,
+            TokenExpirationInSeconds = result.TokenExpirationInSeconds
+        };
     }
 }

@@ -6,9 +6,17 @@ using Persistence;
 
 namespace Application.Queries;
 
-public record SearchProductsQueryRequest(string Term, int Limit, int Skip);
+public record SearchProductsQueryRequest
+{
+    public string Term { get; init; }
+    public int Limit { get; init; }
+    public int Skip { get; init; }
+}
 
-public record SearchProductsQueryResult(IList<ProductDto> Products);
+public record SearchProductsQueryResult
+{
+    public IList<ProductDto> Products { get; init; }
+}
 
 public class SearchProductsQuery : IQuery<Result<SearchProductsQueryResult>, SearchProductsQueryRequest>
 {
@@ -89,7 +97,7 @@ public class SearchProductsQuery : IQuery<Result<SearchProductsQueryResult>, Sea
                 })
                 .ToList();
 
-            return Result<SearchProductsQueryResult>.Success(new SearchProductsQueryResult(productDtos));
+            return Result<SearchProductsQueryResult>.Success(new SearchProductsQueryResult { Products = productDtos });
         }
         catch (Exception ex)
         {

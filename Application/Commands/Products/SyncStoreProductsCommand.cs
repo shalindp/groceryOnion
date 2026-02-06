@@ -5,7 +5,10 @@ using Application.Interfaces;
 
 namespace Application.Commands.Products;
 
-public record SyncStoreProductsRequest(StoreName[]? Stores);
+public record SyncStoreProductsRequest
+{
+    public StoreName[]? Stores { get; init; }
+}
 
 public class SyncStoreProductsCommand : ICommand<bool, SyncStoreProductsRequest>
 {

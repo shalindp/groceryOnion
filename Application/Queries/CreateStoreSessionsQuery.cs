@@ -5,9 +5,17 @@ using Application.Models;
 
 namespace Application.Queries;
 
-public record CreateStoreSessionsQueryRequest(int[] WoolworthsStoresAddressIds, bool ShouldCreateForPaknSave);
+public record CreateStoreSessionsQueryRequest
+{
+    public int[] WoolworthsStoresAddressIds { get; init; }
+    public bool ShouldCreateForPaknSave { get; init; }
+}
 
-public record CreateStoreSessionsQueryResponse(CreateSessionWithRegionDto[] WoolworthsSessions, string AccessToken);
+public record CreateStoreSessionsQueryResponse
+{
+    public CreateSessionWithRegionDto[] WoolworthsSessions { get; init; }
+    public string AccessToken { get; init; }
+}
 
 public class CreateStoreSessionsQuery : IQuery<CreateStoreSessionsQueryResponse, CreateStoreSessionsQueryRequest>
 {
@@ -30,6 +38,10 @@ public class CreateStoreSessionsQuery : IQuery<CreateStoreSessionsQueryResponse,
         
         var paknSaveAccessToken = await _paknSaveProductAction.CreateAccessTokenAsync();
         
-        return new CreateStoreSessionsQueryResponse(woolworthsSessionRegions, paknSaveAccessToken);
+        return new CreateStoreSessionsQueryResponse
+        {
+            WoolworthsSessions = woolworthsSessionRegions,
+            AccessToken = paknSaveAccessToken
+        };
     }
 }

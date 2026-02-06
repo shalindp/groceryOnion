@@ -44,7 +44,7 @@ public class ProductController : ControllerBase
     public async Task<bool> SyncWoolworths([FromBody] StoreName[]? stores)
     {
         var result = await _syncStoreProductsCommand.SendAsync(
-            new SyncStoreProductsRequest(stores)
+            new SyncStoreProductsRequest { Stores = stores }
         );
 
         return result;
@@ -61,7 +61,7 @@ public class ProductController : ControllerBase
     [HttpGet("search", Name = nameof(SearchProducts))]
     public async Task<IList<ProductResponse>> SearchProducts([FromQuery] string term, int limit, int skip)
     {
-        var result = await _searchProductsQuery.SendAsync(new SearchProductsQueryRequest(term, limit, skip));
+        var result = await _searchProductsQuery.SendAsync(new SearchProductsQueryRequest { Term = term, Limit = limit, Skip = skip });
         return _mapper.Map(result.Data!.Products);
     }
 }

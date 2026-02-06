@@ -6,15 +6,17 @@ namespace Application.Queries.User;
 
 public record RefreshTokenQueryRequest
 {
-    public string Username { get; set; }
-    public string RefreshToken { get; set; }
+    public string Username { get; init; }
+    public string RefreshToken { get; init; }
 };
 
-public record RefreshTokenQueryResponse(
-    string Username,
-    string Token,
-    string RefreshToken,
-    int TokenExpirationInSeconds);
+public record RefreshTokenQueryResponse
+{
+    public string Username { get; init; }
+    public string Token { get; init; }
+    public string RefreshToken { get; init; }
+    public int TokenExpirationInSeconds { get; init; }
+}
 
 public class RefreshTokenQuery : ICommand<RefreshTokenQueryResponse, RefreshTokenQueryRequest>
 {
@@ -30,7 +32,12 @@ public class RefreshTokenQuery : ICommand<RefreshTokenQueryResponse, RefreshToke
         var result =
             await _authenticationService.ValidateRefreshTokenAsync(request.Username, request.RefreshToken);
 
-        return new RefreshTokenQueryResponse(result.Username, result.Token, result.RefreshToken,
-            result.TokenExpirationInSeconds);
+        return new RefreshTokenQueryResponse
+        {
+            Username = result.Username,
+            Token = result.Token,
+            RefreshToken = result.RefreshToken,
+            TokenExpirationInSeconds = result.TokenExpirationInSeconds
+        };
     }
 }

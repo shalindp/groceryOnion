@@ -70,6 +70,9 @@ create table app_user
     last_updated_utc timestamptz  not null default now()
 );
 
+insert into app_user (username, password_hash)
+values ('admin', 'admin');
+
 create table refresh_token
 (
     app_user_id      uuid         not null,
