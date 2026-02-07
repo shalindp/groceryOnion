@@ -36,7 +36,7 @@ public class WoolworthsThrottleService : IWoolworthsThrottleService
         }
         finally
         {
-            Thread.Sleep(GetRandomTimeoutSeconds());
+            await GetRandomTimeoutSeconds();
             _semaphore.Release();
         }
     }
@@ -45,10 +45,10 @@ public class WoolworthsThrottleService : IWoolworthsThrottleService
     /// Gets a random timeout in seconds between 80 and 120
     /// </summary>
     /// <returns>A random timeout value in seconds</returns>
-    public int GetRandomTimeoutSeconds()
+    public async Task GetRandomTimeoutSeconds()
     {
-        var timeput = _random.Next(1000, 1500);
+        var timeput = _random.Next(200, 400);
+        await Task.Delay(timeput);
         Console.WriteLine($"@> TIMEOUT: {timeput}");
-        return timeput;
     }
 }

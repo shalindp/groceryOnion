@@ -12,6 +12,7 @@ public interface IWoolworthsProductAction
 
     public Task<IList<Categoery>> GetAllCategoriesAsync();
     public Task<double> GetProductPriceAsync(string storeSku, WoolworthsSession session);
+    public Task<double[]> GetProductPricesAsync((string storeSku, WoolworthsSession session)[] a);
 }
 
 public class WoolworthsProductAction : IWoolworthsProductAction
@@ -19,6 +20,7 @@ public class WoolworthsProductAction : IWoolworthsProductAction
     private readonly IHttpHelper _httpHelper;
     private readonly INpgsqlDbContext _dbContext;
     private readonly IWoolworthsRegionAction _woolworthsRegionAction;
+    private readonly Random _random = new Random();
 
     public WoolworthsProductAction(IHttpHelper httpHelper, INpgsqlDbContext dbContext,
         IWoolworthsRegionAction woolworthsRegionAction)
@@ -133,9 +135,36 @@ public class WoolworthsProductAction : IWoolworthsProductAction
 
     private record ProductPriceResponse(PriceResponse Price);
 
+    private async Task Fake()
+    {
+        await Task.Delay(5000);
+        // Console.WriteLine("@> WOOLWORTHS");
+    }
+
+    public async Task<double[]> GetProductPricesAsync((string storeSku, WoolworthsSession session)[] a)
+    {
+        var list = new List<Task<double>>();
+        foreach (var valueTuple in a)
+        {
+            var x = GetProductPriceAsync(valueTuple.storeSku, valueTuple.session);
+            list.Add(x);
+        }
+
+        var res = await Task.WhenAll(list);
+// await        Task.Delay(GetRandomTimeoutSeconds());
+        return res;
+    }
+
+    public int GetRandomTimeoutSeconds()
+    {
+        var timeput = _random.Next(80, 120);
+        Console.WriteLine($"@> TIMEOUT: {timeput}");
+        return timeput;
+    }
+
     public async Task<double> GetProductPriceAsync(string storeSku, WoolworthsSession session)
     {
-        Console.WriteLine($"@> START {storeSku} - {session.AddressId}");
+        // Console.WriteLine($"@> FETCH SKU:{storeSku} - ADDRESS:{session.AddressId}");
         var url = $"https://www.woolworths.co.nz/api/v1/products/{storeSku}";
 
         var headers = new Dictionary<string, string>
@@ -148,8 +177,9 @@ public class WoolworthsProductAction : IWoolworthsProductAction
         try
         {
             var result = await _httpHelper.GetAsync<ProductPriceResponse>(url, headers: headers);
-            Console.WriteLine($"@> END {storeSku} - {session.AddressId}");
+            // await Fake();
             return result.Body!.Price.OriginalPrice;
+            // return 0;
         }
         catch (Exception e)
         {
