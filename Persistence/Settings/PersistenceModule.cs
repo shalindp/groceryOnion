@@ -8,6 +8,7 @@ public static class PersistenceModule
     {
         services.AddScoped<INpgsqlDbContext>(sp =>
             new NpgsqlDbContext(
-                "Host=localhost;Port=5432;Database=grocery;Username=postgres;Password=admin;Pooling=true;SSL Mode=Prefer;Trust Server Certificate=true;"));
+                
+                "Host=localhost;Port=5432;Database=grocery;Username=postgres;Password=admin;Pooling=true;SSL Mode=Prefer;Trust Server Certificate=true;Minimum Pool Size=5;Maximum Pool Size=20;Connection Lifetime=300;"));
     }
 }

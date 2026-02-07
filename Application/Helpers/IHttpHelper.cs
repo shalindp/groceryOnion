@@ -105,6 +105,52 @@ public class HttpHelper : IHttpHelper
         IDictionary<string, string>? cookies,
         bool freshSession)
     {
+        const int maxRetries = 5;
+        int retryCount = 0;
+        Exception? lastException = null;
+
+        while (retryCount < maxRetries)
+        {
+            try
+            {
+                return await ExecuteRequestAsync<TResponse>(method, url, payload, headers, cookies, freshSession);
+            }
+            catch (Exception ex)
+            {
+                retryCount++;
+                lastException = ex;
+
+                if (retryCount < maxRetries)
+                {
+                    // Add exponential backoff: 1s, 2s, 4s
+                    var delayMs = (int)Math.Pow(2, retryCount - 1) * 1000;
+                    Console.WriteLine($"[HttpHelper] URL: {url} threw {ex.GetType().Name}: {ex.Message} - Retrying {retryCount}/3 after {delayMs}ms delay");
+                    await Task.Delay(delayMs);
+                }
+                else
+                {
+                    var prevColor = Console.ForegroundColor;
+                    Console.ForegroundColor = ConsoleColor.Red;
+
+                    Console.WriteLine($"[HttpHelper] URL: {url} threw {ex.GetType().Name}: {ex.Message} - All {maxRetries} retries exhausted");
+
+                    Console.ForegroundColor = prevColor;
+                }
+            }
+        }
+
+        // If all retries failed, throw the last exception
+        throw lastException!;
+    }
+
+    private async Task<HttpResponseWrapper<TResponse>> ExecuteRequestAsync<TResponse>(
+        HttpMethod method,
+        string url,
+        object? payload,
+        IDictionary<string, string>? headers,
+        IDictionary<string, string>? cookies,
+        bool freshSession)
+    {
         HttpClient client;
         CookieContainer cookieContainer;
 

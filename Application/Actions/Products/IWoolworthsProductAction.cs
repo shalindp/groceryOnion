@@ -63,7 +63,7 @@ public class WoolworthsProductAction : IWoolworthsProductAction
 
     private record SizeResponse(string CupMeasure, string VolumesSize, string VolumeSize);
 
-    private async Task<IList<StoreProduct>> GetAllProductsAsync()
+    private async Task<IList<StoreProduct>> GetAllProductsAsync(Dictionary<string, string> headers)
     {
         var url = (string category, int page) =>
             $"https://www.woolworths.co.nz/api/v1/products?dasFilter=Department;;{category};false&target=browse&inStockProductsOnly=false&size=120&page={page}";
@@ -73,13 +73,13 @@ public class WoolworthsProductAction : IWoolworthsProductAction
         var allProducts = new List<StoreProduct>();
         foreach (var category in categories)
         {
-            Console.WriteLine($" {StoreName.Woolworths.ToDescription()} | Fetching category: " + category.Name);
+            Console.WriteLine($" {StoreName.Woolworths.ToDescription()} | Fetching category: " + category.Name + " ID::" + headers["ASP.NET_SessionId"]);
             for (var page = 1; page <= 1000; page++)
             {
                 var response = url(category.Url, page);
                 var result =
                     await _httpHelper.GetAsync<AllProductsResponse>(response,
-                        headers: Headers.WoolworthsDefaultHeaders);
+                        headers: headers);
 
                 var products = result!.Body!.Products.Items.Where(c => c.Type == "Product").ToList();
 
@@ -100,6 +100,8 @@ public class WoolworthsProductAction : IWoolworthsProductAction
                     StoreSku = c.Sku
                 }));
             }
+
+            // await Task.Delay(GetRandomTimeoutSeconds());
         }
 
         return allProducts;
@@ -157,7 +159,7 @@ public class WoolworthsProductAction : IWoolworthsProductAction
 
     public int GetRandomTimeoutSeconds()
     {
-        var timeput = _random.Next(80, 120);
+        var timeput = _random.Next(200, 220);
         Console.WriteLine($"@> TIMEOUT: {timeput}");
         return timeput;
     }
@@ -191,7 +193,27 @@ public class WoolworthsProductAction : IWoolworthsProductAction
 
     public async Task SyncProductsAsync()
     {
-        var products = await GetAllProductsAsync();
+        var sessions = await _woolworthsRegionAction.CreateSessionWithRegionsAsync([861615, 2176651, 2770176, 2673967, 913420]);
+
+
+        var tasks = new List<Task<IList<StoreProduct>>>();
+        foreach (var session in sessions)
+        {
+            var headers = new Dictionary<string, string>
+                {
+                    ["ASP.NET_SessionId"] = session.SessionId,
+                    ["aga"] = session.Aga,
+                }.Concat(Headers.WoolworthsDefaultHeaders)
+                .ToDictionary(k => k.Key, v => v.Value);
+            var productsTask = GetAllProductsAsync(headers);
+            tasks.Add(productsTask);
+        }
+
+      var xx =  await Task.WhenAll(tasks);
+
+
+        return;
+        var products = await GetAllProductsAsync(new Dictionary<string, string>());
 
         var distinctProducts = products
             .DistinctBy(c => c.Barcode)
