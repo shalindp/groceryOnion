@@ -2,6 +2,8 @@
 using System.Text.RegularExpressions;
 using Application.Actions.Regions;
 using Application.Enums;
+using Application.Models;
+using Application.Queries;
 using Persistence;
 
 namespace Application.Actions.Products;
@@ -10,8 +12,10 @@ public interface IPaknSaveProductAction
 {
     public Task SyncProductsAsync();
     public Task<string> CreateAccessTokenAsync();
-    public Task<double> GetProductPricingAsync(string storeId, string accessToken, string storeSku);
+    public Task<ProductPriceQueryRequest> GetProductPricingAsync(ProductPriceQueryRequest productPriceQueryRequest, string accessToken);
 }
+
+public record PaknSavePricingResponse(string StoreId, double Price);
 
 public class PaknSaveProductAction : IPaknSaveProductAction
 {
@@ -110,20 +114,21 @@ public class PaknSaveProductAction : IPaknSaveProductAction
 
     private record Pricing(double Price);
 
-    public async Task<double> GetProductPricingAsync(string storeId, string accessToken, string storeSku)
+    public async Task<ProductPriceQueryRequest> GetProductPricingAsync(ProductPriceQueryRequest productPriceQueryRequest, string accessToken)
     {
         var headers = GetAuthentication(accessToken);
-        var url = $"https://api-prod.paknsave.co.nz/v1/edge/store/{storeId}/product/{storeSku}";
+        var url = $"https://api-prod.paknsave.co.nz/v1/edge/store/{productPriceQueryRequest.StoreId}/product/{productPriceQueryRequest.StoreSku}";
 
         var res = await _httpHelper.GetAsync<Pricing>(url, headers);
         if (res?.Body?.Price != null)
         {
-            return res.Body.Price / 100;
+            productPriceQueryRequest.Price = res.Body.Price / 100;
+            return productPriceQueryRequest;
         }
 
-        return 0;
+        return productPriceQueryRequest;
     }
-    
+
     private async Task<ProductResponse[]> GetProductsDetailsAsync(ProductResponse[] products,
         Dictionary<string, string> headers)
     {

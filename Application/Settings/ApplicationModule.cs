@@ -33,6 +33,6 @@ public static class ApplicationModule
         services.AddScoped<CreateStoreSessionsQuery>();
         services.AddScoped<RefreshTokenQuery>();
         services.AddScoped<SelectStoresCommand>();
-        services.AddScoped<GetProductsPricingQuery>();
+        services.AddScoped<ProductsPricingQuery>();
     }
 }

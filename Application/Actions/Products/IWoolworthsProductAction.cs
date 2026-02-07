@@ -2,6 +2,7 @@
 using Application.Constants;
 using Application.Enums;
 using Application.Models;
+using Application.Queries;
 using Persistence;
 
 namespace Application.Actions.Products;
@@ -10,11 +11,14 @@ public interface IWoolworthsProductAction
 {
     public Task SyncProductsAsync();
     public Task<IList<Categoery>> GetAllCategoriesAsync();
-    public Task<double> GetProductPriceAsync(string storeSku, WoolworthsSession session);
-    public Task<double[]> GetProductPricesAsync(List<WoolworthsStoreSkuAndSessionArg> ags);
+    public Task<ProductPriceQueryRequest[]> GetProductPricesAsync(List<WoolworthsStoreSkuAndSessionArg> ags);
+
+    public Task<ProductPriceQueryRequest> GetProductPriceAsync(ProductPriceQueryRequest productPriceQueryRequest, WoolworthsSession session);
+
 }
 
-public record WoolworthsStoreSkuAndSessionArg(string StoreSku, WoolworthsSession Session);
+public record WoolworthsStoreSkuAndSessionArg(ProductPriceQueryRequest ProductPriceQueryRequest, WoolworthsSession Session);
+public record WoolworthsPricingResponse(string StoreId, double Price);
 
 public class WoolworthsProductAction : IWoolworthsProductAction
 {
@@ -138,12 +142,12 @@ public class WoolworthsProductAction : IWoolworthsProductAction
 
     private record ProductPriceResponse(PriceResponse Price);
 
-    public async Task<double[]> GetProductPricesAsync(List<WoolworthsStoreSkuAndSessionArg> ags)
+    public async Task<ProductPriceQueryRequest[]> GetProductPricesAsync(List<WoolworthsStoreSkuAndSessionArg> ags)
     {
-        var list = new List<Task<double>>();
+        var list = new List<Task<ProductPriceQueryRequest>>();
         foreach (var arg in ags)
         {
-            var task = GetProductPriceAsync(arg.StoreSku, arg.Session);
+            var task = GetProductPriceAsync(arg.ProductPriceQueryRequest, arg.Session);
             list.Add(task);
         }
 
@@ -157,10 +161,10 @@ public class WoolworthsProductAction : IWoolworthsProductAction
         return timeput;
     }
 
-    public async Task<double> GetProductPriceAsync(string storeSku, WoolworthsSession session)
+    public async Task<ProductPriceQueryRequest> GetProductPriceAsync(ProductPriceQueryRequest productPriceQueryRequest, WoolworthsSession session)
     {
         // Console.WriteLine($"@> FETCH SKU:{storeSku} - ADDRESS:{session.AddressId}");
-        var url = $"https://www.woolworths.co.nz/api/v1/products/{storeSku}";
+        var url = $"https://www.woolworths.co.nz/api/v1/products/{productPriceQueryRequest.StoreSku}";
 
         var headers = new Dictionary<string, string>
             {
@@ -172,16 +176,14 @@ public class WoolworthsProductAction : IWoolworthsProductAction
         try
         {
             var result = await _httpHelper.GetAsync<ProductPriceResponse>(url, headers: headers);
-            // await Fake();
-            return result.Body!.Price.OriginalPrice;
-            // return 0;
+            productPriceQueryRequest.Price = result.Body.Price.OriginalPrice;
         }
         catch (Exception e)
         {
             Environment.FailFast("Critical unrecoverable error", e);
         }
 
-        return 0.0;
+        return productPriceQueryRequest;
     }
 
     public async Task SyncProductsAsync()

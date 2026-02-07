@@ -10,8 +10,8 @@ namespace Presentation.Mappers;
 public interface IProductMapper
 {
     ProductResponse Map(ProductDto source);
-    GetProductsPricingQueryRequest Map(GetProductsPricingRequest source);
-    GetProductsPricingResponse Map(GetProductsPricingQueryResponse source);
+    ProductPriceQueryRequest[] Map(ProductsPriceRequest[] source);
+    ProductsPriceResponse[] Map(ProductPriceQueryRequest[] source);
     IList<ProductResponse> Map(IList<ProductDto> source);
 }
 
@@ -19,9 +19,9 @@ public interface IProductMapper
 public partial class ProductMapper : IProductMapper
 {
     public partial ProductResponse Map(ProductDto source);
-    public partial GetProductsPricingQueryRequest Map(GetProductsPricingRequest source);
+    public partial ProductPriceQueryRequest[] Map(ProductsPriceRequest[] source);
 
-    public partial GetProductsPricingResponse Map(GetProductsPricingQueryResponse source);
+    public partial ProductsPriceResponse[] Map(ProductPriceQueryRequest[] source);
 
     public partial IList<ProductResponse> Map(IList<ProductDto> source);
 }
