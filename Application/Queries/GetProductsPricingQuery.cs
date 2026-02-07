@@ -29,15 +29,17 @@ public class GetProductsPricingQuery : IQuery<GetProductsPricingQueryResponse, G
     private readonly INpgsqlDbContext _dbContext;
     private readonly IWoolworthsProductAction _woolworthsProductAction;
     private readonly IWoolworthsThrottleService _woolworthsThrottleService;
+    private readonly IPaknSaveProductAction _paknSaveProductAction;
     private readonly ICacheService _cacheService;
 
     public GetProductsPricingQuery(INpgsqlDbContext dbContext, IWoolworthsProductAction woolworthsProductAction, IWoolworthsThrottleService woolworthsThrottleService,
-        ICacheService cacheService)
+        ICacheService cacheService, IPaknSaveProductAction paknSaveProductAction)
     {
         _dbContext = dbContext;
         _woolworthsProductAction = woolworthsProductAction;
         _woolworthsThrottleService = woolworthsThrottleService;
         _cacheService = cacheService;
+        _paknSaveProductAction = paknSaveProductAction;
     }
 
     public async Task<GetProductsPricingQueryResponse> SendAsync(GetProductsPricingQueryRequest request)
@@ -45,6 +47,8 @@ public class GetProductsPricingQuery : IQuery<GetProductsPricingQueryResponse, G
         var woolworthsSessions = (await _dbContext.Queries.getWoolworthsSession(new QueriesSql.getWoolworthsSessionArgs(request.WoolworthStoreIds)))
             .Select(c => c.WoolworthsSession)
             .ToList();
+
+        var paknSaveSession = (await _dbContext.Queries.getPaknSaveSession())?.PaknsaveSession;
 
         var woolworthTasks = new List<WoolworthsStoreSkuAndSessionArg>();
 
@@ -56,6 +60,15 @@ public class GetProductsPricingQuery : IQuery<GetProductsPricingQueryResponse, G
                 woolworthTasks.Add(new WoolworthsStoreSkuAndSessionArg(productIdAndStoreSku.StoreSku, woolworthsSession));
             }
         }
+
+        foreach (var paknSaveStoreId in request.PaknSaveStoreIds)
+        {
+            foreach (var productIdAndStoreSku in request.ProductIdAndStoreSkus)
+            {
+                await _paknSaveProductAction.GetProductPricingAsync(paknSaveStoreId, paknSaveSession?.AccessToken, productIdAndStoreSku.StoreSku);
+            }
+        }
+
 
         var prices = await _woolworthsThrottleService.ExecuteAsync(() => _woolworthsProductAction.GetProductPricesAsync(woolworthTasks));
         Console.WriteLine(string.Join(", ", prices));

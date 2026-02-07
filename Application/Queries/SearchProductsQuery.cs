@@ -63,7 +63,7 @@ public class SearchProductsQuery : IQuery<Result<SearchProductsQueryResult>, Sea
                     return new
                     {
                         Product = firstProduct,
-                        Stores = group.Select(p => p.StoreName).Distinct().ToList(),
+                        Stores = group.Select(p => new {p.StoreName, p.StoreSku}).Distinct().ToList(),
                         Score = (int)weightedScore
                     };
                 })
@@ -78,25 +78,21 @@ public class SearchProductsQuery : IQuery<Result<SearchProductsQueryResult>, Sea
             var productDtos = searchResults
                 .Select(result =>
                 {
-                    var pricingUrls = result.Stores
-                        .Select(storeName => new PricingUrlDto
-                        {
-                            StoreName = ParseStoreName(storeName),
-                            Sku = result.Product.StoreSku
-                        })
-                        .ToList();
-
                     return new ProductDto
                     {
                         ProductId = result.Product.ProductId,
                         Barcode = result.Product.Barcode,
-                        StoreSku = result.Product.StoreSku,
+                        StoreSkus = result.Stores.Select(c=> new StoreSkuDto
+                        {
+                            StoreName = c.StoreName.ToStoreNameEnum(),
+                            StoreSkus = c.StoreSku,
+                        }).ToList(),
+                        // StoreSku = result.Product.StoreSku,
                         Name = result.Product.Name,
                         Brand = result.Product.Brand,
-                        StoreType = ParseStoreName(result.Stores.First()),
+                        // StoreType = ParseStoreName(result.Stores.First()),
                         ImageUrl = result.Product.ImageUrl,
                         MaxQuantity = (float)(result.Product.MaxQuantity ?? 0),
-                        PricingUrls = pricingUrls
                     };
                 })
                 .ToList();

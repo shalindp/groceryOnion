@@ -100,8 +100,8 @@ values (@session_id, @aga, @address_id, @expires_utc);
 -- name: getWoolworthsSession :many
 select sqlc.embed(woolworths_session)
 from woolworths_session
-where address_id = any(@address_ids::int[])
-  and expires_utc > now() 
+where address_id = any (@address_ids::int[])
+  and expires_utc > now()
 order by expires_utc asc;
 
 -- name: createPaknSaveSession :one
@@ -112,8 +112,9 @@ returning sqlc.embed(paknsave_session);
 -- name: getPaknSaveSession :one
 select sqlc.embed(paknsave_session)
 from paknsave_session
-where  expires_utc > now()
+where expires_utc > now()
 limit 1;
+
 
 -- name: addSelectedStore :copyfrom
 insert into selected_stores (app_user_id, store_name, store_id)

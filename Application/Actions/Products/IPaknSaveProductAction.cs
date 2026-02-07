@@ -10,7 +10,7 @@ public interface IPaknSaveProductAction
 {
     public Task SyncProductsAsync();
     public Task<string> CreateAccessTokenAsync();
-
+    public Task<double> GetProductPricingAsync(string storeId, string accessToken, string storeSku);
 }
 
 public class PaknSaveProductAction : IPaknSaveProductAction
@@ -87,7 +87,7 @@ public class PaknSaveProductAction : IPaknSaveProductAction
             ..productsToInsert.Select(c =>
                 new QueriesSql.CreateProductsArgs
                 {
-                    Barcode = !string.IsNullOrEmpty(c.Barcode)? c.Barcode: "",
+                    Barcode = !string.IsNullOrEmpty(c.Barcode) ? c.Barcode : "",
                     Name = c.Name,
                     Brand = c.Brand,
                     StoreName = StoreName.PaknSave.ToDescription(),
@@ -108,6 +108,22 @@ public class PaknSaveProductAction : IPaknSaveProductAction
 
     private record ProductDetailsResponse(string ProductId, string Sku);
 
+    private record Pricing(double Price);
+
+    public async Task<double> GetProductPricingAsync(string storeId, string accessToken, string storeSku)
+    {
+        var headers = GetAuthentication(accessToken);
+        var url = $"https://api-prod.paknsave.co.nz/v1/edge/store/{storeId}/product/{storeSku}";
+
+        var res = await _httpHelper.GetAsync<Pricing>(url, headers);
+        if (res?.Body?.Price != null)
+        {
+            return res.Body.Price / 100;
+        }
+
+        return 0;
+    }
+    
     private async Task<ProductResponse[]> GetProductsDetailsAsync(ProductResponse[] products,
         Dictionary<string, string> headers)
     {
