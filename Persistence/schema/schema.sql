@@ -114,6 +114,6 @@ create table woolworths_session
 
 create table paknsave_session
 (
-    access_token varchar(255) not null,
+    access_token TEXT not null,
     expires_utc  timestamptz  not null
 );

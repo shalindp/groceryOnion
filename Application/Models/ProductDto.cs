@@ -15,6 +15,7 @@ public class ProductDto
 
 public class StoreSkuDto
 {
+    public Guid ProductId { get; set; }
     public StoreName StoreName { get; init; }
-    public string StoreSkus { get; init; }
+    public string StoreSku { get; init; }
 }

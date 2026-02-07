@@ -1,5 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using Application.Queries;
+using Application.Enums;
 
 namespace Presentation.Requests.Product;
 
@@ -9,5 +9,12 @@ public record GetProductsPricingRequest
 
     [Required] public string[] PaknSaveStoreIds { get; init; }
 
-    [Required] public ProductIdAndStoreSku[] ProductIdAndStoreSkus { get; init; }
+    [Required] public StoreSkuRequest[] StoreSkus { get; init; }
+}
+
+public class StoreSkuRequest
+{
+    public Guid ProductId { get; set; }
+    public StoreName StoreName { get; init; }
+    public string StoreSku { get; init; }
 }

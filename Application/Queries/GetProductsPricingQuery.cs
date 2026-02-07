@@ -1,6 +1,7 @@
 ﻿using Application.Actions.Products;
 using Application.Enums;
 using Application.Interfaces;
+using Application.Models;
 using Application.Services;
 using Persistence;
 
@@ -12,7 +13,7 @@ public record GetProductsPricingQueryRequest
 
     public string[] PaknSaveStoreIds { get; init; }
 
-    public ProductIdAndStoreSku[] ProductIdAndStoreSkus { get; init; }
+    public StoreSkuDto[] StoreSkus { get; init; }
 }
 
 public record ProductIdAndStoreSku(Guid ProductId, string StoreSku);
@@ -54,24 +55,27 @@ public class GetProductsPricingQuery : IQuery<GetProductsPricingQueryResponse, G
 
         foreach (var woolworthsStoreId in request.WoolworthStoreIds)
         {
-            foreach (var productIdAndStoreSku in request.ProductIdAndStoreSkus)
+            foreach (var productIdAndStoreSku in request.StoreSkus.Where(c => c.StoreName == StoreName.Woolworths))
             {
                 var woolworthsSession = woolworthsSessions.First(c => c?.AddressId == woolworthsStoreId)!.Value;
                 woolworthTasks.Add(new WoolworthsStoreSkuAndSessionArg(productIdAndStoreSku.StoreSku, woolworthsSession));
             }
         }
 
+        var paknSaveTasks = new List<Task<double>>();
         foreach (var paknSaveStoreId in request.PaknSaveStoreIds)
         {
-            foreach (var productIdAndStoreSku in request.ProductIdAndStoreSkus)
+            foreach (var productIdAndStoreSku in request.StoreSkus.Where(c => c.StoreName == StoreName.PaknSave))
             {
-                await _paknSaveProductAction.GetProductPricingAsync(paknSaveStoreId, paknSaveSession?.AccessToken, productIdAndStoreSku.StoreSku);
+                var paknSaveTask = _paknSaveProductAction.GetProductPricingAsync(paknSaveStoreId, paknSaveSession?.AccessToken, productIdAndStoreSku.StoreSku);
+                paknSaveTasks.Add(paknSaveTask);
             }
         }
 
-
+        var paknSavePrices = await Task.WhenAll(paknSaveTasks);
         var prices = await _woolworthsThrottleService.ExecuteAsync(() => _woolworthsProductAction.GetProductPricesAsync(woolworthTasks));
         Console.WriteLine(string.Join(", ", prices));
+        Console.WriteLine(string.Join(", ", paknSavePrices));
 
         return new GetProductsPricingQueryResponse();
     }

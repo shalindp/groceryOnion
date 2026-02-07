@@ -84,8 +84,9 @@ public class SearchProductsQuery : IQuery<Result<SearchProductsQueryResult>, Sea
                         Barcode = result.Product.Barcode,
                         StoreSkus = result.Stores.Select(c=> new StoreSkuDto
                         {
+                            ProductId = result.Product.ProductId,
                             StoreName = c.StoreName.ToStoreNameEnum(),
-                            StoreSkus = c.StoreSku,
+                            StoreSku = c.StoreSku,
                         }).ToList(),
                         // StoreSku = result.Product.StoreSku,
                         Name = result.Product.Name,

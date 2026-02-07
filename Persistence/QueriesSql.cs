@@ -716,7 +716,7 @@ public class QueriesSql
         }
     }
 
-    private const string getWoolworthsSessionSql = "select woolworths_session.address_id, woolworths_session.session_id, woolworths_session.aga, woolworths_session.expires_utc from woolworths_session where address_id = any(@address_ids::int[]) and expires_utc > now() order by expires_utc asc";
+    private const string getWoolworthsSessionSql = "select woolworths_session.address_id, woolworths_session.session_id, woolworths_session.aga, woolworths_session.expires_utc from woolworths_session where address_id = any (@address_ids::int[]) and expires_utc > now() order by expires_utc asc";
     public readonly record struct getWoolworthsSessionRow(WoolworthsSession? WoolworthsSession);
     public readonly record struct getWoolworthsSessionArgs(int[] AddressIds);
     public async Task<List<getWoolworthsSessionRow>> getWoolworthsSession(getWoolworthsSessionArgs args)

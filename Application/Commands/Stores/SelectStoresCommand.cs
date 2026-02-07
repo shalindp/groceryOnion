@@ -80,7 +80,7 @@ public class SelectStoresCommand : ICommand<bool, SelectStoresCommandRequest>
 
         var selectedPaknSaveStores = request.PaknSaveStoreIds
             .Select(c =>
-                new QueriesSql.addSelectedStoreArgs(_userContext.UserId, StoreName.Woolworths.ToDescription(), c))
+                new QueriesSql.addSelectedStoreArgs(_userContext.UserId, StoreName.PaknSave.ToDescription(), c))
             .ToList();
 
         var selectedStores = selectedWoolworthsStores.Concat(selectedPaknSaveStores).ToList();
