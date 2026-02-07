@@ -9,11 +9,12 @@ namespace Application.Actions.Products;
 public interface IWoolworthsProductAction
 {
     public Task SyncProductsAsync();
-
     public Task<IList<Categoery>> GetAllCategoriesAsync();
     public Task<double> GetProductPriceAsync(string storeSku, WoolworthsSession session);
-    public Task<double[]> GetProductPricesAsync((string storeSku, WoolworthsSession session)[] a);
+    public Task<double[]> GetProductPricesAsync(List<WoolworthsStoreSkuAndSessionArg> ags);
 }
+
+public record WoolworthsStoreSkuAndSessionArg(string StoreSku, WoolworthsSession Session);
 
 public class WoolworthsProductAction : IWoolworthsProductAction
 {
@@ -137,24 +138,16 @@ public class WoolworthsProductAction : IWoolworthsProductAction
 
     private record ProductPriceResponse(PriceResponse Price);
 
-    private async Task Fake()
-    {
-        await Task.Delay(5000);
-        // Console.WriteLine("@> WOOLWORTHS");
-    }
-
-    public async Task<double[]> GetProductPricesAsync((string storeSku, WoolworthsSession session)[] a)
+    public async Task<double[]> GetProductPricesAsync(List<WoolworthsStoreSkuAndSessionArg> ags)
     {
         var list = new List<Task<double>>();
-        foreach (var valueTuple in a)
+        foreach (var arg in ags)
         {
-            var x = GetProductPriceAsync(valueTuple.storeSku, valueTuple.session);
-            list.Add(x);
+            var task = GetProductPriceAsync(arg.StoreSku, arg.Session);
+            list.Add(task);
         }
 
-        var res = await Task.WhenAll(list);
-// await        Task.Delay(GetRandomTimeoutSeconds());
-        return res;
+        return await Task.WhenAll(list);
     }
 
     public int GetRandomTimeoutSeconds()
@@ -209,7 +202,7 @@ public class WoolworthsProductAction : IWoolworthsProductAction
             tasks.Add(productsTask);
         }
 
-      var xx =  await Task.WhenAll(tasks);
+        var xx = await Task.WhenAll(tasks);
 
 
         return;
