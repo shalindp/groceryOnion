@@ -23,18 +23,18 @@ public class ProductController : ControllerBase
     private readonly SyncStoreProductsCommand _syncStoreProductsCommand;
     private readonly SyncCanonicalProductsCommand _syncCanonicalProductsCommand;
     private readonly SearchProductsQuery _searchProductsQuery;
-    private readonly ProductsPricingQuery _productsPricingQuery;
+    private readonly GetProductsPricingQuery _getProductsPricingQuery;
 
     public ProductController(IWoolworthsProductAction woolworthsProductAction, IProductMapper mapper,
         SyncStoreProductsCommand syncStoreProductsCommand, SyncCanonicalProductsCommand syncCanonicalProductsCommand,
-        SearchProductsQuery searchProductsQuery, ProductsPricingQuery productsPricingQuery)
+        SearchProductsQuery searchProductsQuery, GetProductsPricingQuery getProductsPricingQuery)
     {
         _woolworthsProductAction = woolworthsProductAction;
         _mapper = mapper;
         _syncStoreProductsCommand = syncStoreProductsCommand;
         _syncCanonicalProductsCommand = syncCanonicalProductsCommand;
         _searchProductsQuery = searchProductsQuery;
-        _productsPricingQuery = productsPricingQuery;
+        _getProductsPricingQuery = getProductsPricingQuery;
     }
 
     [HttpGet("categories", Name = nameof(GetCategories))]
@@ -73,7 +73,7 @@ public class ProductController : ControllerBase
     [HttpPost("price", Name = nameof(ProductPriceAsync))]
     public async Task<ProductsPriceResponse[]> ProductPriceAsync([FromBody] ProductsPriceRequest[] request)
     {
-        var result = await _productsPricingQuery.SendAsync(_mapper.Map(request));
+        var result = await _getProductsPricingQuery.SendAsync(_mapper.Map(request));
         return _mapper.Map(result);
     }
 }

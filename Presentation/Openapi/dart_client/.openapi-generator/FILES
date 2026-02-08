@@ -43,4 +43,3 @@ lib/model/store_name.dart
 lib/model/store_response.dart
 lib/model/store_sku_dto.dart
 pubspec.yaml
-test/store_response_test.dart

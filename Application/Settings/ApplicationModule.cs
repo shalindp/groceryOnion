@@ -38,6 +38,6 @@ public static class ApplicationModule
         services.AddScoped<GetStoresQuery>();
         services.AddScoped<RefreshTokenQuery>();
         services.AddScoped<SelectStoresCommand>();
-        services.AddScoped<ProductsPricingQuery>();
+        services.AddScoped<GetProductsPricingQuery>();
     }
 }

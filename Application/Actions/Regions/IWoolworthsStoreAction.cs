@@ -31,6 +31,7 @@ public class WoolworthsStoreAction : IWoolworthsStoreAction
         var woolworthsGetRegionsResults = result!
             .Body!.StoreAreas.SelectMany(c => c.StoreAddresses)
             .Select(c => new WoolworthsGetRegionsResult(c.Id.ToString(), c.Name))
+            .DistinctBy(c=>c.StoreId)
             .ToList();
 
         return woolworthsGetRegionsResults.Select(c => new StoreQueryResponse

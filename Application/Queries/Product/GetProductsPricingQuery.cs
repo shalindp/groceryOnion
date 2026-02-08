@@ -15,7 +15,7 @@ public class ProductPriceQueryRequest
     public double Price { get; set; } = 0.0;
 }
 
-public class ProductsPricingQuery : IQuery<ProductPriceQueryRequest[], ProductPriceQueryRequest[]>
+public class GetProductsPricingQuery : IQuery<ProductPriceQueryRequest[], ProductPriceQueryRequest[]>
 {
     private readonly INpgsqlDbContext _dbContext;
     private readonly IWoolworthsProductAction _woolworthsProductAction;
@@ -23,7 +23,7 @@ public class ProductsPricingQuery : IQuery<ProductPriceQueryRequest[], ProductPr
     private readonly IPaknSaveProductAction _paknSaveProductAction;
     private readonly ICacheService _cacheService;
 
-    public ProductsPricingQuery(INpgsqlDbContext dbContext, IWoolworthsProductAction woolworthsProductAction, IWoolworthsThrottleService woolworthsThrottleService,
+    public GetProductsPricingQuery(INpgsqlDbContext dbContext, IWoolworthsProductAction woolworthsProductAction, IWoolworthsThrottleService woolworthsThrottleService,
         ICacheService cacheService, IPaknSaveProductAction paknSaveProductAction)
     {
         _dbContext = dbContext;
