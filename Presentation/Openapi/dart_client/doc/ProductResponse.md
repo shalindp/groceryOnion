@@ -15,7 +15,7 @@ Name | Type | Description | Notes
 **storeType** | [**StoreName**](StoreName.md) |  | 
 **imageUrl** | **String** |  | 
 **maxQuantity** | **double** |  | 
-**pricingUrls** | [**List<PricingUrlResponse>**](PricingUrlResponse.md) |  | [default to const []]
+**storeSkus** | [**List<StoreSkuDto>**](StoreSkuDto.md) |  | [default to const []]
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

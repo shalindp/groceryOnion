@@ -106,7 +106,7 @@ create table selected_stores
 
 create table woolworths_session
 (
-    address_id  int          not null,
+    store_id    varchar(255) not null,
     session_id  varchar(255) not null,
     aga         varchar(255) not null,
     expires_utc timestamptz  not null
@@ -114,6 +114,6 @@ create table woolworths_session
 
 create table paknsave_session
 (
-    access_token TEXT not null,
-    expires_utc  timestamptz  not null
+    access_token TEXT        not null,
+    expires_utc  timestamptz not null
 );

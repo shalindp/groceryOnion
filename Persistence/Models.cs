@@ -10,5 +10,5 @@ public readonly record struct ProductStoreProduct(Guid ProductId, Guid StoreProd
 public readonly record struct AppUser(Guid AppUserId, string Username, string PasswordHash, bool IsDeleted, DateTime CreatedUtc, DateTime LastUpdatedUtc);
 public readonly record struct RefreshToken(Guid AppUserId, string Token, DateTime ExpiresUtc, bool IsDeleted, DateTime CreatedUtc, DateTime LastUpdatedUtc);
 public readonly record struct SelectedStore(Guid AppUserId, string StoreName, string StoreId, bool IsActive);
-public readonly record struct WoolworthsSession(int AddressId, string SessionId, string Aga, DateTime ExpiresUtc);
+public readonly record struct WoolworthsSession(string StoreId, string SessionId, string Aga, DateTime ExpiresUtc);
 public readonly record struct PaknsaveSession(string AccessToken, DateTime ExpiresUtc);

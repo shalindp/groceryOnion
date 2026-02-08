@@ -1,7 +1,7 @@
 ﻿using Application.Actions.Products;
 using Application.Actions.Regions;
+using Application.Actions.Session;
 using Application.Actions.User;
-using Application.Enums;
 using Application.Interfaces;
 using Persistence;
 
@@ -9,7 +9,7 @@ namespace Application.Commands.Stores;
 
 public record SelectStoresCommandRequest
 {
-    public int[] WoolworthStoreIds { get; init; }
+    public string[] WoolworthStoreIds { get; init; }
 
     public string[] PaknSaveStoreIds { get; init; }
 }
@@ -18,16 +18,18 @@ public class SelectStoresCommand : ICommand<bool, SelectStoresCommandRequest>
 {
     private readonly INpgsqlDbContext _dbContext;
     private readonly IUserContext _userContext;
-    private readonly IWoolworthsRegionAction _woolworthsRegionAction;
+    private readonly IWoolworthsStoreAction _woolworthsStoreAction;
     private readonly IPaknSaveProductAction _paknSaveProductAction;
+    private readonly IPaknSaveSessionAction _paknSaveSessionAction;
 
 
-    public SelectStoresCommand(INpgsqlDbContext dbContext, IUserContext userContext, IWoolworthsRegionAction woolworthsRegionAction, IPaknSaveProductAction paknSaveProductAction)
+    public SelectStoresCommand(INpgsqlDbContext dbContext, IUserContext userContext, IWoolworthsStoreAction woolworthsStoreAction, IPaknSaveProductAction paknSaveProductAction, IPaknSaveSessionAction paknSaveSessionAction)
     {
         _dbContext = dbContext;
         _userContext = userContext;
-        _woolworthsRegionAction = woolworthsRegionAction;
+        _woolworthsStoreAction = woolworthsStoreAction;
         _paknSaveProductAction = paknSaveProductAction;
+        _paknSaveSessionAction = paknSaveSessionAction;
     }
 
     public async Task<bool> SendAsync(SelectStoresCommandRequest request)
@@ -37,19 +39,19 @@ public class SelectStoresCommand : ICommand<bool, SelectStoresCommandRequest>
             var existingSessions = (await _dbContext.Queries.getWoolworthsSession(
                     new QueriesSql.getWoolworthsSessionArgs
                     {
-                        AddressIds = request.WoolworthStoreIds,
+                        StoreIds = request.WoolworthStoreIds,
                     })).Select(c => c.WoolworthsSession)
                 .ToList();
 
             var sessionsToCreate = request.WoolworthStoreIds
-                .Where(c => !existingSessions.Select(o => o?.AddressId).Contains(c))
+                .Where(c => !existingSessions.Select(o => o?.StoreId).Contains(c))
                 .ToArray();
 
-            var newSessions = await _woolworthsRegionAction.CreateSessionWithRegionsAsync(sessionsToCreate);
+            var newSessions = await _woolworthsStoreAction.CreateSessionWithRegionsAsync(sessionsToCreate);
 
             var sessionArgs = newSessions.Select(c => new QueriesSql.createWoolworthsSessionArgs()
             {
-                AddressId = c.AddressId,
+                StoreId = c.StoreId,
                 SessionId = c.SessionId,
                 Aga = c.Aga,
                 ExpiresUtc = DateTime.UtcNow.AddMinutes(15)
@@ -63,29 +65,24 @@ public class SelectStoresCommand : ICommand<bool, SelectStoresCommandRequest>
             var x = await _dbContext.Queries.getPaknSaveSession();
             if (x == null)
             {
-                var accessToken = await _paknSaveProductAction.CreateAccessTokenAsync();
-                await _dbContext.Queries.createPaknSaveSession(new QueriesSql.createPaknSaveSessionArgs()
-                {
-                    AccessToken = accessToken,
-                    ExpiresUtc = DateTime.UtcNow.AddMinutes(15)
-                });
+                await _paknSaveSessionAction.GetOrCreateSessionAsync();
             }
         }
 
-        var selectedWoolworthsStores = request.WoolworthStoreIds
-            .Select(c =>
-                new QueriesSql.addSelectedStoreArgs(_userContext.UserId, StoreName.Woolworths.ToDescription(),
-                    c.ToString()))
-            .ToList();
+        // var selectedWoolworthsStores = request.WoolworthStoreIds
+        //     .Select(c =>
+        //         new QueriesSql.addSelectedStoreArgs(_userContext.UserId, StoreName.Woolworths.ToDescription(),
+        //             c.ToString()))
+        //     .ToList();
+        //
+        // var selectedPaknSaveStores = request.PaknSaveStoreIds
+        //     .Select(c =>
+        //         new QueriesSql.addSelectedStoreArgs(_userContext.UserId, StoreName.PaknSave.ToDescription(), c))
+        //     .ToList();
 
-        var selectedPaknSaveStores = request.PaknSaveStoreIds
-            .Select(c =>
-                new QueriesSql.addSelectedStoreArgs(_userContext.UserId, StoreName.PaknSave.ToDescription(), c))
-            .ToList();
+        // var selectedStores = selectedWoolworthsStores.Concat(selectedPaknSaveStores).ToList();
 
-        var selectedStores = selectedWoolworthsStores.Concat(selectedPaknSaveStores).ToList();
-
-        await _dbContext.Queries.addSelectedStore(selectedStores);
+        // await _dbContext.Queries.addSelectedStore(selectedStores);
 
         return true;
     }

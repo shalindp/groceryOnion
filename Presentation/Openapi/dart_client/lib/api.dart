@@ -29,15 +29,21 @@ part 'auth/http_basic_auth.dart';
 part 'auth/http_bearer_auth.dart';
 
 part 'api/product_api.dart';
-part 'api/region_api.dart';
+part 'api/store_api.dart';
+part 'api/user_api.dart';
 
 part 'model/categoery.dart';
-part 'model/create_session_with_region_id.dart';
-part 'model/create_session_with_region_response.dart';
-part 'model/pricing_url_response.dart';
 part 'model/product_response.dart';
+part 'model/products_price_request.dart';
+part 'model/products_price_response.dart';
+part 'model/refresh_request.dart';
+part 'model/select_stores_request.dart';
+part 'model/sign_in_request.dart';
+part 'model/sign_in_response.dart';
+part 'model/sign_up_request.dart';
 part 'model/store_name.dart';
-part 'model/woolworths_get_regions_result.dart';
+part 'model/store_response.dart';
+part 'model/store_sku_dto.dart';
 
 
 /// An [ApiClient] instance that uses the default values obtained from

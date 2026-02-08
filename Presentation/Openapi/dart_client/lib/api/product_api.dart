@@ -60,6 +60,56 @@ class ProductApi {
     return null;
   }
 
+  /// Performs an HTTP 'POST /Product/price' operation and returns the [Response].
+  /// Parameters:
+  ///
+  /// * [List<ProductsPriceRequest>] productsPriceRequest:
+  Future<Response> productPriceAsyncWithHttpInfo({ List<ProductsPriceRequest>? productsPriceRequest, }) async {
+    // ignore: prefer_const_declarations
+    final path = r'/Product/price';
+
+    // ignore: prefer_final_locals
+    Object? postBody = productsPriceRequest;
+
+    final queryParams = <QueryParam>[];
+    final headerParams = <String, String>{};
+    final formParams = <String, String>{};
+
+    const contentTypes = <String>['application/json', 'text/json', 'application/*+json'];
+
+
+    return apiClient.invokeAPI(
+      path,
+      'POST',
+      queryParams,
+      postBody,
+      headerParams,
+      formParams,
+      contentTypes.isEmpty ? null : contentTypes.first,
+    );
+  }
+
+  /// Parameters:
+  ///
+  /// * [List<ProductsPriceRequest>] productsPriceRequest:
+  Future<List<ProductsPriceResponse>?> productPriceAsync({ List<ProductsPriceRequest>? productsPriceRequest, }) async {
+    final response = await productPriceAsyncWithHttpInfo( productsPriceRequest: productsPriceRequest, );
+    if (response.statusCode >= HttpStatus.badRequest) {
+      throw ApiException(response.statusCode, await _decodeBodyBytes(response));
+    }
+    // When a remote server returns no body with a status of 204, we shall not decode it.
+    // At the time of writing this, `dart:convert` will throw an "Unexpected end of input"
+    // FormatException when trying to decode an empty string.
+    if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
+      final responseBody = await _decodeBodyBytes(response);
+      return (await apiClient.deserializeAsync(responseBody, 'List<ProductsPriceResponse>') as List)
+        .cast<ProductsPriceResponse>()
+        .toList(growable: false);
+
+    }
+    return null;
+  }
+
   /// Performs an HTTP 'GET /Product/search' operation and returns the [Response].
   /// Parameters:
   ///

@@ -3,6 +3,7 @@ using Application.Constants;
 using Application.Enums;
 using Application.Models;
 using Application.Queries;
+using Application.Queries.Product;
 using Persistence;
 
 namespace Application.Actions.Products;
@@ -14,25 +15,25 @@ public interface IWoolworthsProductAction
     public Task<ProductPriceQueryRequest[]> GetProductPricesAsync(List<WoolworthsStoreSkuAndSessionArg> ags);
 
     public Task<ProductPriceQueryRequest> GetProductPriceAsync(ProductPriceQueryRequest productPriceQueryRequest, WoolworthsSession session);
-
 }
 
 public record WoolworthsStoreSkuAndSessionArg(ProductPriceQueryRequest ProductPriceQueryRequest, WoolworthsSession Session);
+
 public record WoolworthsPricingResponse(string StoreId, double Price);
 
 public class WoolworthsProductAction : IWoolworthsProductAction
 {
     private readonly IHttpHelper _httpHelper;
     private readonly INpgsqlDbContext _dbContext;
-    private readonly IWoolworthsRegionAction _woolworthsRegionAction;
+    private readonly IWoolworthsStoreAction _woolworthsStoreAction;
     private readonly Random _random = new Random();
 
     public WoolworthsProductAction(IHttpHelper httpHelper, INpgsqlDbContext dbContext,
-        IWoolworthsRegionAction woolworthsRegionAction)
+        IWoolworthsStoreAction woolworthsStoreAction)
     {
         _httpHelper = httpHelper;
         _dbContext = dbContext;
-        _woolworthsRegionAction = woolworthsRegionAction;
+        _woolworthsStoreAction = woolworthsStoreAction;
     }
 
     private record AllProductsResponse(ContextResponse Context, ProductsResponse Products);
@@ -175,7 +176,7 @@ public class WoolworthsProductAction : IWoolworthsProductAction
 
         try
         {
-            var result = await _httpHelper.GetAsync<ProductPriceResponse>(url, headers: headers);
+            var result = await _httpHelper.GetAsync<ProductPriceResponse>(url, headers: headers, freshSession: true);
             productPriceQueryRequest.Price = result.Body.Price.OriginalPrice;
         }
         catch (Exception e)
@@ -188,26 +189,26 @@ public class WoolworthsProductAction : IWoolworthsProductAction
 
     public async Task SyncProductsAsync()
     {
-        var sessions = await _woolworthsRegionAction.CreateSessionWithRegionsAsync([861615, 2176651, 2770176, 2673967, 913420]);
+        // var sessions = await _woolworthsRegionAction.CreateSessionWithRegionsAsync([861615, 2176651, 2770176, 2673967, 913420]);
+        //
+        //
+        // var tasks = new List<Task<IList<StoreProduct>>>();
+        // foreach (var session in sessions)
+        // {
+        //     var headers = new Dictionary<string, string>
+        //         {
+        //             ["ASP.NET_SessionId"] = session.SessionId,
+        //             ["aga"] = session.Aga,
+        //         }.Concat(Headers.WoolworthsDefaultHeaders)
+        //         .ToDictionary(k => k.Key, v => v.Value);
+        //     var productsTask = GetAllProductsAsync(headers);
+        //     tasks.Add(productsTask);
+        // }
+        //
+        // var xx = await Task.WhenAll(tasks);
+        //
 
-
-        var tasks = new List<Task<IList<StoreProduct>>>();
-        foreach (var session in sessions)
-        {
-            var headers = new Dictionary<string, string>
-                {
-                    ["ASP.NET_SessionId"] = session.SessionId,
-                    ["aga"] = session.Aga,
-                }.Concat(Headers.WoolworthsDefaultHeaders)
-                .ToDictionary(k => k.Key, v => v.Value);
-            var productsTask = GetAllProductsAsync(headers);
-            tasks.Add(productsTask);
-        }
-
-        var xx = await Task.WhenAll(tasks);
-
-
-        return;
+        // return;
         var products = await GetAllProductsAsync(new Dictionary<string, string>());
 
         var distinctProducts = products

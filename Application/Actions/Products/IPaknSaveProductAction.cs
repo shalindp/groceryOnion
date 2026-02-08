@@ -1,9 +1,11 @@
 ﻿using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 using Application.Actions.Regions;
+using Application.Actions.Session;
 using Application.Enums;
-using Application.Models;
+using Application.Helpers;
 using Application.Queries;
+using Application.Queries.Product;
 using Persistence;
 
 namespace Application.Actions.Products;
@@ -11,7 +13,6 @@ namespace Application.Actions.Products;
 public interface IPaknSaveProductAction
 {
     public Task SyncProductsAsync();
-    public Task<string> CreateAccessTokenAsync();
     public Task<ProductPriceQueryRequest> GetProductPricingAsync(ProductPriceQueryRequest productPriceQueryRequest, string accessToken);
 }
 
@@ -21,14 +22,14 @@ public class PaknSaveProductAction : IPaknSaveProductAction
 {
     private readonly IHttpHelper _httpHelper;
     private readonly INpgsqlDbContext _dbContext;
-    private readonly IWoolworthsRegionAction _woolworthsRegionAction;
+    private readonly IPaknSaveSessionAction _paknSaveSessionAction;
 
     public PaknSaveProductAction(IHttpHelper httpHelper, INpgsqlDbContext dbContext,
-        IWoolworthsRegionAction woolworthsRegionAction)
+        IPaknSaveSessionAction paknSaveSessionAction)
     {
         _httpHelper = httpHelper;
         _dbContext = dbContext;
-        _woolworthsRegionAction = woolworthsRegionAction;
+        _paknSaveSessionAction = paknSaveSessionAction;
     }
 
     public async Task SyncProductsAsync()
@@ -116,10 +117,10 @@ public class PaknSaveProductAction : IPaknSaveProductAction
 
     public async Task<ProductPriceQueryRequest> GetProductPricingAsync(ProductPriceQueryRequest productPriceQueryRequest, string accessToken)
     {
-        var headers = GetAuthentication(accessToken);
+        var headers = PaknSaveHelper.BuildAuthenticationHeader(accessToken);
         var url = $"https://api-prod.paknsave.co.nz/v1/edge/store/{productPriceQueryRequest.StoreId}/product/{productPriceQueryRequest.StoreSku}";
 
-        var res = await _httpHelper.GetAsync<Pricing>(url, headers);
+        var res = await _httpHelper.GetAsync<Pricing>(url, headers, ignoreHttpStatusCodes: [404]);
         if (res?.Body?.Price != null)
         {
             productPriceQueryRequest.Price = res.Body.Price / 100;
@@ -132,7 +133,7 @@ public class PaknSaveProductAction : IPaknSaveProductAction
     private async Task<ProductResponse[]> GetProductsDetailsAsync(ProductResponse[] products,
         Dictionary<string, string> headers)
     {
-        var tasks = new List<Task<HttpResponseWrapper<ProductDetailsResponse>?>>();
+        var tasks = new List<Task<HttpResponseWrapper<ProductDetailsResponse>>>();
         foreach (var product in products)
         {
             var url =
@@ -160,8 +161,8 @@ public class PaknSaveProductAction : IPaknSaveProductAction
 
     private async Task<IList<StoreProduct>> GetAllProductsAsync()
     {
-        var tokenResult = await CreateAccessTokenAsync();
-        var headers = GetAuthentication(tokenResult);
+        var session = await _paknSaveSessionAction.CreateSessionAsync();
+        var headers = PaknSaveHelper.BuildAuthenticationHeader(session.AccessToken);
         var categories = await GetAllCategoriesAsync(headers);
 
         const string url =
@@ -213,39 +214,6 @@ public class PaknSaveProductAction : IPaknSaveProductAction
 
         var response = await _httpHelper.GetAsync<CategoryResponse[]>(url, headers);
         return response.Body!;
-    }
-
-    private record CreateTokenRequest(string fingerprintGuest, string fingerprintUser);
-
-    private record CreateTokenResponse(string access_token);
-
-    public async Task<string> CreateAccessTokenAsync()
-    {
-        const string url = "https://www.paknsave.co.nz/api/user/get-current-user";
-        var body = new Dictionary<string, string>()
-        {
-            ["fingerprintGuest"] =
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
-            ["fingerprintUser"] = GenerateRandomHex32()
-        };
-
-        var response = await _httpHelper.PostAsync<CreateTokenResponse>(url, payload: body);
-        return response.Body!.access_token!;
-    }
-
-    public static string GenerateRandomHex32()
-    {
-        var bytes = new byte[16];
-        RandomNumberGenerator.Fill(bytes);
-        return Convert.ToHexString(bytes).ToLowerInvariant();
-    }
-
-    private Dictionary<string, string> GetAuthentication(string accessToken)
-    {
-        return new Dictionary<string, string>()
-        {
-            ["authorization"] = $"Bearer {accessToken}"
-        };
     }
 
     private (double size, string unit) ParseSize(string name, string displayName)

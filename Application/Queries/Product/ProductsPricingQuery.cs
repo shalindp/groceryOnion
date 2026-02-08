@@ -4,7 +4,7 @@ using Application.Interfaces;
 using Application.Services;
 using Persistence;
 
-namespace Application.Queries;
+namespace Application.Queries.Product;
 
 public class ProductPriceQueryRequest
 {
@@ -39,7 +39,7 @@ public class ProductsPricingQuery : IQuery<ProductPriceQueryRequest[], ProductPr
         var woolworthsRequests = request.Where(c => c.StoreName == StoreName.Woolworths)
             .ToArray();
 
-        var woolworthsStoreIds = woolworthsRequests.Select(c => int.Parse(c.StoreId)).ToArray();
+        var woolworthsStoreIds = woolworthsRequests.Select(c => c.StoreId).ToArray();
         var woolworthsSessions = (await _dbContext.Queries.getWoolworthsSession(new QueriesSql.getWoolworthsSessionArgs(woolworthsStoreIds)))
             .Select(c => c.WoolworthsSession)
             .ToList();
@@ -47,7 +47,7 @@ public class ProductsPricingQuery : IQuery<ProductPriceQueryRequest[], ProductPr
         var woolworthTasks = new List<WoolworthsStoreSkuAndSessionArg>();
         foreach (var storePriceHolder in woolworthsRequests)
         {
-            var session = woolworthsSessions.First(c => c.Value.AddressId == int.Parse(storePriceHolder.StoreId));
+            var session = woolworthsSessions.First(c => c.Value.StoreId.Equals(storePriceHolder.StoreId));
             woolworthTasks.Add(new WoolworthsStoreSkuAndSessionArg(storePriceHolder, session.Value));
             // var woolworthsTask = _woolworthsProductAction.GetProductPriceAsync(storePriceHolder, session!.Value);
             // woolworthTasks.Add(woolworthsTask);
@@ -68,11 +68,11 @@ public class ProductsPricingQuery : IQuery<ProductPriceQueryRequest[], ProductPr
 
         // var x = async () => await Task.WhenAll(woolworthTasks);
         
-        var woolworthsPrices = await _woolworthsThrottleService.ExecuteAsync(()=> _woolworthsProductAction.GetProductPricesAsync(woolworthTasks));
-        var paknSavePrices = await Task.WhenAll(paknSaveTasks);
+        var woolworthsPrices = _woolworthsThrottleService.ExecuteAsync(()=> _woolworthsProductAction.GetProductPricesAsync(woolworthTasks));
+        var paknSavePrices = Task.WhenAll(paknSaveTasks);
 
+        var prices = (await Task.WhenAll(woolworthsPrices, paknSavePrices)).SelectMany(c=>c).ToArray();
 
-        var prices= woolworthsPrices.Concat(paknSavePrices).ToArray();
         return prices;
     }
 }

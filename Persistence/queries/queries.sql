@@ -94,13 +94,13 @@ where username = @username
 limit 1;
 
 -- name: createWoolworthsSession :copyfrom
-insert into woolworths_session (session_id, aga, address_id, expires_utc)
-values (@session_id, @aga, @address_id, @expires_utc);
+insert into woolworths_session (session_id, aga, store_id, expires_utc)
+values (@session_id, @aga, @store_id, @expires_utc);
 
 -- name: getWoolworthsSession :many
 select sqlc.embed(woolworths_session)
 from woolworths_session
-where address_id = any (@address_ids::int[])
+where store_id = any (@store_ids::varchar(255)[])
   and expires_utc > now()
 order by expires_utc asc;
 

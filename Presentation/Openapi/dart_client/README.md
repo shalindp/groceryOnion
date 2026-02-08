@@ -59,22 +59,31 @@ All URIs are relative to *http://localhost*
 Class | Method | HTTP request | Description
 ------------ | ------------- | ------------- | -------------
 *ProductApi* | [**getCategories**](doc//ProductApi.md#getcategories) | **GET** /Product/categories | 
+*ProductApi* | [**productPriceAsync**](doc//ProductApi.md#productpriceasync) | **POST** /Product/price | 
 *ProductApi* | [**searchProducts**](doc//ProductApi.md#searchproducts) | **GET** /Product/search | 
 *ProductApi* | [**syncCanonicalProducts**](doc//ProductApi.md#synccanonicalproducts) | **POST** /Product/sync/canonical | 
 *ProductApi* | [**syncWoolworths**](doc//ProductApi.md#syncwoolworths) | **POST** /Product/sync | 
-*RegionApi* | [**createSessionWithRegionsAsync**](doc//RegionApi.md#createsessionwithregionsasync) | **POST** /Region/create-session | 
-*RegionApi* | [**getAllRegions**](doc//RegionApi.md#getallregions) | **GET** /Region | 
+*StoreApi* | [**selectStoresAsync**](doc//StoreApi.md#selectstoresasync) | **POST** /Store/select | 
+*StoreApi* | [**storesAsync**](doc//StoreApi.md#storesasync) | **GET** /Store | 
+*UserApi* | [**refreshTokenAsync**](doc//UserApi.md#refreshtokenasync) | **POST** /User/refresh | 
+*UserApi* | [**signInAsync**](doc//UserApi.md#signinasync) | **POST** /User/sign-in | 
+*UserApi* | [**signUpAsync**](doc//UserApi.md#signupasync) | **POST** /User/sign-up | 
 
 
 ## Documentation For Models
 
  - [Categoery](doc//Categoery.md)
- - [CreateSessionWithRegionId](doc//CreateSessionWithRegionId.md)
- - [CreateSessionWithRegionResponse](doc//CreateSessionWithRegionResponse.md)
- - [PricingUrlResponse](doc//PricingUrlResponse.md)
  - [ProductResponse](doc//ProductResponse.md)
+ - [ProductsPriceRequest](doc//ProductsPriceRequest.md)
+ - [ProductsPriceResponse](doc//ProductsPriceResponse.md)
+ - [RefreshRequest](doc//RefreshRequest.md)
+ - [SelectStoresRequest](doc//SelectStoresRequest.md)
+ - [SignInRequest](doc//SignInRequest.md)
+ - [SignInResponse](doc//SignInResponse.md)
+ - [SignUpRequest](doc//SignUpRequest.md)
  - [StoreName](doc//StoreName.md)
- - [WoolworthsGetRegionsResult](doc//WoolworthsGetRegionsResult.md)
+ - [StoreResponse](doc//StoreResponse.md)
+ - [StoreSkuDto](doc//StoreSkuDto.md)
 
 
 ## Documentation For Authorization

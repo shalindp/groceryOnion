@@ -20,7 +20,7 @@ class ProductResponse {
     required this.storeType,
     required this.imageUrl,
     required this.maxQuantity,
-    this.pricingUrls = const [],
+    this.storeSkus = const [],
   });
 
   String productId;
@@ -37,7 +37,7 @@ class ProductResponse {
 
   double maxQuantity;
 
-  List<PricingUrlResponse> pricingUrls;
+  List<StoreSkuDto> storeSkus;
 
   @override
   bool operator ==(Object other) => identical(this, other) || other is ProductResponse &&
@@ -48,7 +48,7 @@ class ProductResponse {
     other.storeType == storeType &&
     other.imageUrl == imageUrl &&
     other.maxQuantity == maxQuantity &&
-    _deepEquality.equals(other.pricingUrls, pricingUrls);
+    _deepEquality.equals(other.storeSkus, storeSkus);
 
   @override
   int get hashCode =>
@@ -60,10 +60,10 @@ class ProductResponse {
     (storeType.hashCode) +
     (imageUrl.hashCode) +
     (maxQuantity.hashCode) +
-    (pricingUrls.hashCode);
+    (storeSkus.hashCode);
 
   @override
-  String toString() => 'ProductResponse[productId=$productId, barcode=$barcode, name=$name, brand=$brand, storeType=$storeType, imageUrl=$imageUrl, maxQuantity=$maxQuantity, pricingUrls=$pricingUrls]';
+  String toString() => 'ProductResponse[productId=$productId, barcode=$barcode, name=$name, brand=$brand, storeType=$storeType, imageUrl=$imageUrl, maxQuantity=$maxQuantity, storeSkus=$storeSkus]';
 
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{};
@@ -74,7 +74,7 @@ class ProductResponse {
       json[r'storeType'] = this.storeType;
       json[r'imageUrl'] = this.imageUrl;
       json[r'maxQuantity'] = this.maxQuantity;
-      json[r'pricingUrls'] = this.pricingUrls;
+      json[r'storeSkus'] = this.storeSkus;
     return json;
   }
 
@@ -104,7 +104,7 @@ class ProductResponse {
         storeType: StoreName.fromJson(json[r'storeType'])!,
         imageUrl: mapValueOfType<String>(json, r'imageUrl')!,
         maxQuantity: mapValueOfType<double>(json, r'maxQuantity')!,
-        pricingUrls: PricingUrlResponse.listFromJson(json[r'pricingUrls']),
+        storeSkus: StoreSkuDto.listFromJson(json[r'storeSkus']),
       );
     }
     return null;
@@ -159,7 +159,7 @@ class ProductResponse {
     'storeType',
     'imageUrl',
     'maxQuantity',
-    'pricingUrls',
+    'storeSkus',
   };
 }
 

@@ -16,27 +16,31 @@ public interface IHttpHelper
         string url,
         IDictionary<string, string>? headers = null,
         IDictionary<string, string>? cookies = null,
-        bool freshSession = false);
+        bool freshSession = false,
+        IEnumerable<int>? ignoreHttpStatusCodes = null);
 
     Task<HttpResponseWrapper<TResponse>> PostAsync<TResponse>(
         string url,
         object? payload = null,
         IDictionary<string, string>? headers = null,
         IDictionary<string, string>? cookies = null,
-        bool freshSession = false);
+        bool freshSession = false,
+        IEnumerable<int>? ignoreHttpStatusCodes = null);
 
     Task<HttpResponseWrapper<TResponse>> PutAsync<TResponse>(
         string url,
         object? payload = null,
         IDictionary<string, string>? headers = null,
         IDictionary<string, string>? cookies = null,
-        bool freshSession = false);
+        bool freshSession = false,
+        IEnumerable<int>? ignoreHttpStatusCodes = null);
 
     Task<HttpResponseWrapper<TResponse>> DeleteAsync<TResponse>(
         string url,
         IDictionary<string, string>? headers = null,
         IDictionary<string, string>? cookies = null,
-        bool freshSession = false);
+        bool freshSession = false,
+        IEnumerable<int>? ignoreHttpStatusCodes = null);
 
     string? GetCookie(string url, HttpResponseHeaders headers, string cookieName);
 }
@@ -71,31 +75,35 @@ public class HttpHelper : IHttpHelper
         string url,
         IDictionary<string, string>? headers = null,
         IDictionary<string, string>? cookies = null,
-        bool freshSession = false)
-        => SendAsync<TResponse>(HttpMethod.Get, url, null, headers, cookies, freshSession);
+        bool freshSession = false,
+        IEnumerable<int>? ignoreHttpStatusCodes = null)
+        => SendAsync<TResponse>(HttpMethod.Get, url, null, headers, cookies, freshSession, ignoreHttpStatusCodes);
 
     public Task<HttpResponseWrapper<TResponse>> PostAsync<TResponse>(
         string url,
         object? payload = null,
         IDictionary<string, string>? headers = null,
         IDictionary<string, string>? cookies = null,
-        bool freshSession = false)
-        => SendAsync<TResponse>(HttpMethod.Post, url, payload, headers, cookies, freshSession);
+        bool freshSession = false,
+        IEnumerable<int>? ignoreHttpStatusCodes = null)
+        => SendAsync<TResponse>(HttpMethod.Post, url, payload, headers, cookies, freshSession, ignoreHttpStatusCodes);
 
     public Task<HttpResponseWrapper<TResponse>> PutAsync<TResponse>(
         string url,
         object? payload = null,
         IDictionary<string, string>? headers = null,
         IDictionary<string, string>? cookies = null,
-        bool freshSession = false)
-        => SendAsync<TResponse>(HttpMethod.Put, url, payload, headers, cookies, freshSession);
+        bool freshSession = false,
+        IEnumerable<int>? ignoreHttpStatusCodes = null)
+        => SendAsync<TResponse>(HttpMethod.Put, url, payload, headers, cookies, freshSession, ignoreHttpStatusCodes);
 
     public Task<HttpResponseWrapper<TResponse>> DeleteAsync<TResponse>(
         string url,
         IDictionary<string, string>? headers = null,
         IDictionary<string, string>? cookies = null,
-        bool freshSession = false)
-        => SendAsync<TResponse>(HttpMethod.Delete, url, null, headers, cookies, freshSession);
+        bool freshSession = false,
+        IEnumerable<int>? ignoreHttpStatusCodes = null)
+        => SendAsync<TResponse>(HttpMethod.Delete, url, null, headers, cookies, freshSession, ignoreHttpStatusCodes);
 
     private async Task<HttpResponseWrapper<TResponse>> SendAsync<TResponse>(
         HttpMethod method,
@@ -103,17 +111,51 @@ public class HttpHelper : IHttpHelper
         object? payload,
         IDictionary<string, string>? headers,
         IDictionary<string, string>? cookies,
-        bool freshSession)
+        bool freshSession,
+        IEnumerable<int>? ignoreHttpStatusCodes = null)
     {
         const int maxRetries = 5;
         int retryCount = 0;
         Exception? lastException = null;
+        var ignoreStatusCodeSet = ignoreHttpStatusCodes?.ToHashSet() ?? new HashSet<int>();
 
         while (retryCount < maxRetries)
         {
             try
             {
-                return await ExecuteRequestAsync<TResponse>(method, url, payload, headers, cookies, freshSession);
+                return await ExecuteRequestAsync<TResponse>(method, url, payload, headers, cookies, freshSession, ignoreStatusCodeSet);
+            }
+            catch (HttpRequestException ex)
+            {
+                retryCount++;
+                lastException = ex;
+
+                // Check if this is an ignored status code
+                if (ignoreStatusCodeSet.Count > 0 && int.TryParse(ex.StatusCode?.GetHashCode().ToString(), out var statusCode))
+                {
+                    if (ignoreStatusCodeSet.Contains((int)ex.StatusCode))
+                    {
+                        // Don't retry, just throw the exception
+                        throw;
+                    }
+                }
+
+                if (retryCount < maxRetries)
+                {
+                    // Add exponential backoff: 1s, 2s, 4s
+                    var delayMs = (int)Math.Pow(2, retryCount - 1) * 1000;
+                    Console.WriteLine($"[HttpHelper] URL: {url} threw {ex.GetType().Name}: {ex.Message} - Retrying {retryCount}/5 after {delayMs}ms delay");
+                    await Task.Delay(delayMs);
+                }
+                else
+                {
+                    var prevColor = Console.ForegroundColor;
+                    Console.ForegroundColor = ConsoleColor.Red;
+
+                    Console.WriteLine($"[HttpHelper] URL: {url} threw {ex.GetType().Name}: {ex.Message} - All {maxRetries} retries exhausted");
+
+                    Console.ForegroundColor = prevColor;
+                }
             }
             catch (Exception ex)
             {
@@ -124,7 +166,7 @@ public class HttpHelper : IHttpHelper
                 {
                     // Add exponential backoff: 1s, 2s, 4s
                     var delayMs = (int)Math.Pow(2, retryCount - 1) * 1000;
-                    Console.WriteLine($"[HttpHelper] URL: {url} threw {ex.GetType().Name}: {ex.Message} - Retrying {retryCount}/3 after {delayMs}ms delay");
+                    Console.WriteLine($"[HttpHelper] URL: {url} threw {ex.GetType().Name}: {ex.Message} - Retrying {retryCount}/5 after {delayMs}ms delay");
                     await Task.Delay(delayMs);
                 }
                 else
@@ -149,8 +191,11 @@ public class HttpHelper : IHttpHelper
         object? payload,
         IDictionary<string, string>? headers,
         IDictionary<string, string>? cookies,
-        bool freshSession)
+        bool freshSession,
+        HashSet<int> ignoreHttpStatusCodes = null)
     {
+        ignoreHttpStatusCodes ??= new HashSet<int>();
+
         HttpClient client;
         CookieContainer cookieContainer;
 
@@ -202,19 +247,39 @@ public class HttpHelper : IHttpHelper
         }
 
         using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+        
+        // Check if status code should be ignored
+        if (!response.IsSuccessStatusCode && ignoreHttpStatusCodes.Contains((int)response.StatusCode))
+        {
+            // Return response even if not successful
+            var content = response.Content != null
+                ? await response.Content.ReadAsStringAsync()
+                : null;
+
+            var body = !string.IsNullOrWhiteSpace(content)
+                ? JsonSerializer.Deserialize<TResponse>(content, JsonOptions)
+                : default;
+
+            return new HttpResponseWrapper<TResponse>
+            {
+                Body = body,
+                Headers = response.Headers
+            };
+        }
+
         response.EnsureSuccessStatusCode();
 
-        var content = response.Content != null
+        var responseContent = response.Content != null
             ? await response.Content.ReadAsStringAsync()
             : null;
 
-        var body = !string.IsNullOrWhiteSpace(content)
-            ? JsonSerializer.Deserialize<TResponse>(content, JsonOptions)
+        var responseBody = !string.IsNullOrWhiteSpace(responseContent)
+            ? JsonSerializer.Deserialize<TResponse>(responseContent, JsonOptions)
             : default;
 
         return new HttpResponseWrapper<TResponse>
         {
-            Body = body,
+            Body = responseBody,
             Headers = response.Headers
         };
     }

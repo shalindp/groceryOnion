@@ -691,8 +691,8 @@ public class QueriesSql
         return null;
     }
 
-    private const string createWoolworthsSessionSql = "COPY woolworths_session (session_id, aga, address_id, expires_utc) FROM STDIN (FORMAT BINARY)";
-    public readonly record struct createWoolworthsSessionArgs(string SessionId, string Aga, int AddressId, DateTime ExpiresUtc);
+    private const string createWoolworthsSessionSql = "COPY woolworths_session (session_id, aga, store_id, expires_utc) FROM STDIN (FORMAT BINARY)";
+    public readonly record struct createWoolworthsSessionArgs(string SessionId, string Aga, string StoreId, DateTime ExpiresUtc);
     public async Task createWoolworthsSession(List<createWoolworthsSessionArgs> args)
     {
         using (var connection = new NpgsqlConnection(ConnectionString))
@@ -705,7 +705,7 @@ public class QueriesSql
                     await writer.StartRowAsync();
                     await writer.WriteAsync(row.SessionId);
                     await writer.WriteAsync(row.Aga);
-                    await writer.WriteAsync(row.AddressId);
+                    await writer.WriteAsync(row.StoreId);
                     await writer.WriteAsync(row.ExpiresUtc);
                 }
 
@@ -716,9 +716,9 @@ public class QueriesSql
         }
     }
 
-    private const string getWoolworthsSessionSql = "select woolworths_session.address_id, woolworths_session.session_id, woolworths_session.aga, woolworths_session.expires_utc from woolworths_session where address_id = any (@address_ids::int[]) and expires_utc > now() order by expires_utc asc";
+    private const string getWoolworthsSessionSql = "select woolworths_session.store_id, woolworths_session.session_id, woolworths_session.aga, woolworths_session.expires_utc from woolworths_session where store_id = any (@store_ids::varchar(255)[]) and expires_utc > now() order by expires_utc asc";
     public readonly record struct getWoolworthsSessionRow(WoolworthsSession? WoolworthsSession);
-    public readonly record struct getWoolworthsSessionArgs(int[] AddressIds);
+    public readonly record struct getWoolworthsSessionArgs(string[] StoreIds);
     public async Task<List<getWoolworthsSessionRow>> getWoolworthsSession(getWoolworthsSessionArgs args)
     {
         if (this.Transaction == null)
@@ -727,12 +727,12 @@ public class QueriesSql
             {
                 using (var command = connection.CreateCommand(getWoolworthsSessionSql))
                 {
-                    command.Parameters.AddWithValue("@address_ids", args.AddressIds);
+                    command.Parameters.AddWithValue("@store_ids", args.StoreIds);
                     using (var reader = await command.ExecuteReaderAsync())
                     {
                         var result = new List<getWoolworthsSessionRow>();
                         while (await reader.ReadAsync())
-                            result.Add(new getWoolworthsSessionRow { WoolworthsSession = new WoolworthsSession { AddressId = reader.GetInt32(0), SessionId = reader.GetString(1), Aga = reader.GetString(2), ExpiresUtc = reader.GetDateTime(3) } });
+                            result.Add(new getWoolworthsSessionRow { WoolworthsSession = new WoolworthsSession { StoreId = reader.GetString(0), SessionId = reader.GetString(1), Aga = reader.GetString(2), ExpiresUtc = reader.GetDateTime(3) } });
                         return result;
                     }
                 }
@@ -745,12 +745,12 @@ public class QueriesSql
         {
             command.CommandText = getWoolworthsSessionSql;
             command.Transaction = this.Transaction;
-            command.Parameters.AddWithValue("@address_ids", args.AddressIds);
+            command.Parameters.AddWithValue("@store_ids", args.StoreIds);
             using (var reader = await command.ExecuteReaderAsync())
             {
                 var result = new List<getWoolworthsSessionRow>();
                 while (await reader.ReadAsync())
-                    result.Add(new getWoolworthsSessionRow { WoolworthsSession = new WoolworthsSession { AddressId = reader.GetInt32(0), SessionId = reader.GetString(1), Aga = reader.GetString(2), ExpiresUtc = reader.GetDateTime(3) } });
+                    result.Add(new getWoolworthsSessionRow { WoolworthsSession = new WoolworthsSession { StoreId = reader.GetString(0), SessionId = reader.GetString(1), Aga = reader.GetString(2), ExpiresUtc = reader.GetDateTime(3) } });
                 return result;
             }
         }

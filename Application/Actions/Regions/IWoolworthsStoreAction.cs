@@ -1,38 +1,44 @@
 ﻿using Application.Constants;
 using Application.Enums;
 using Application.Models;
+using Application.Queries.Store;
 
 namespace Application.Actions.Regions;
 
-public interface IWoolworthsRegionAction
+public interface IWoolworthsStoreAction
 {
-    public Task<CreateSessionWithRegionDto[]> CreateSessionWithRegionsAsync(int[] addressIds);
-    public Task<CreateSessionWithRegionDto> CreateSessionWithRegionAsync(int addressId);
-    public Task<IList<WoolworthsGetRegionsResult>> GetRegionsAsync();
+    public Task<CreateSessionWithRegionDto[]> CreateSessionWithRegionsAsync(string[] storeId);
+    public Task<CreateSessionWithRegionDto> CreateSessionWithRegionAsync(string storeId);
+    public Task<IList<StoreQueryResponse>> GetStoresAsync();
 }
 
-public record WoolworthsGetRegionsResult(int Id, string StoreName);
+public record WoolworthsGetRegionsResult(string StoreId, string StoreName);
 
-public class WoolworthsRegionAction : IWoolworthsRegionAction
+public class WoolworthsStoreAction : IWoolworthsStoreAction
 {
     private readonly IHttpHelper _httpHelper;
 
-    public WoolworthsRegionAction(IHttpHelper httpHelper)
+    public WoolworthsStoreAction(IHttpHelper httpHelper)
     {
         _httpHelper = httpHelper;
     }
 
-    public async Task<IList<WoolworthsGetRegionsResult>> GetRegionsAsync()
+    public async Task<IList<StoreQueryResponse>> GetStoresAsync()
     {
         const string url = "https://www.woolworths.co.nz/api/v1/addresses/pickup-addresses";
         var result = await _httpHelper.GetAsync<RegionsResponse?>(url, headers: Headers.WoolworthsDefaultHeaders,
             freshSession: true)!;
         var woolworthsGetRegionsResults = result!
             .Body!.StoreAreas.SelectMany(c => c.StoreAddresses)
-            .Select(c => new WoolworthsGetRegionsResult(c.Id, c.Name))
+            .Select(c => new WoolworthsGetRegionsResult(c.Id.ToString(), c.Name))
             .ToList();
 
-        return woolworthsGetRegionsResults;
+        return woolworthsGetRegionsResults.Select(c => new StoreQueryResponse
+        {
+            StoreId = c.StoreId,
+            StoreRegionName = c.StoreName,
+            StoreName = StoreName.Woolworths,
+        }).ToList();
     }
 
     private record RegionsResponse(StoreAreasResponse[] StoreAreas);
@@ -41,25 +47,25 @@ public class WoolworthsRegionAction : IWoolworthsRegionAction
 
     private record StoreAddressesResponse(int Id, string Name);
 
-    public async Task<CreateSessionWithRegionDto[]> CreateSessionWithRegionsAsync(int[] addressIds)
+    public async Task<CreateSessionWithRegionDto[]> CreateSessionWithRegionsAsync(string[] storeIds)
     {
         var tasks = new List<Task<CreateSessionWithRegionDto>>();
 
-        foreach (var regionId in addressIds)
+        foreach (var storeId in storeIds)
         {
-            var task = CreateSessionWithRegionAsync(regionId);
+            var task = CreateSessionWithRegionAsync(storeId);
             tasks.Add(task);
         }
 
         return await Task.WhenAll(tasks);
     }
 
-    public async Task<CreateSessionWithRegionDto> CreateSessionWithRegionAsync(int addressId)
+    public async Task<CreateSessionWithRegionDto> CreateSessionWithRegionAsync(string storeId)
     {
         var url = "https://www.woolworths.co.nz/api/v1/fulfilment/my/pickup-addresses";
         var body = new
         {
-            addressId = addressId
+            addressId = storeId
         };
 
         var result = await _httpHelper.PutAsync<ChangeRegionResponse>(url, body,
@@ -73,7 +79,7 @@ public class WoolworthsRegionAction : IWoolworthsRegionAction
             Address = result.Body!.Context.Fulfilment.Address,
             SessionId = sessionId!,
             Aga = aga!,
-            AddressId = addressId,
+            StoreId = storeId,
         };
     }
 

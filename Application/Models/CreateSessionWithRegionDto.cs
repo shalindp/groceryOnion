@@ -7,7 +7,7 @@ public class CreateSessionWithRegionDto
     public StoreName StoreName { get; set; }
     public string Address { get; set; }
     
-    public int AddressId { get; set; }
+    public string StoreId { get; set; }
     public string SessionId { get; set; }
     public string Aga { get; set; }
 }

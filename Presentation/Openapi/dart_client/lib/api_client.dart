@@ -184,18 +184,28 @@ class ApiClient {
           return value is DateTime ? value : DateTime.tryParse(value);
         case 'Categoery':
           return Categoery.fromJson(value);
-        case 'CreateSessionWithRegionId':
-          return CreateSessionWithRegionId.fromJson(value);
-        case 'CreateSessionWithRegionResponse':
-          return CreateSessionWithRegionResponse.fromJson(value);
-        case 'PricingUrlResponse':
-          return PricingUrlResponse.fromJson(value);
         case 'ProductResponse':
           return ProductResponse.fromJson(value);
+        case 'ProductsPriceRequest':
+          return ProductsPriceRequest.fromJson(value);
+        case 'ProductsPriceResponse':
+          return ProductsPriceResponse.fromJson(value);
+        case 'RefreshRequest':
+          return RefreshRequest.fromJson(value);
+        case 'SelectStoresRequest':
+          return SelectStoresRequest.fromJson(value);
+        case 'SignInRequest':
+          return SignInRequest.fromJson(value);
+        case 'SignInResponse':
+          return SignInResponse.fromJson(value);
+        case 'SignUpRequest':
+          return SignUpRequest.fromJson(value);
         case 'StoreName':
           return StoreNameTypeTransformer().decode(value);
-        case 'WoolworthsGetRegionsResult':
-          return WoolworthsGetRegionsResult.fromJson(value);
+        case 'StoreResponse':
+          return StoreResponse.fromJson(value);
+        case 'StoreSkuDto':
+          return StoreSkuDto.fromJson(value);
         default:
           dynamic match;
           if (value is List && (match = _regList.firstMatch(targetType)?.group(1)) != null) {

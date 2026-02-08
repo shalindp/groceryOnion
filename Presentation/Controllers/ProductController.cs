@@ -3,6 +3,7 @@ using Application.Commands.Products;
 using Application.Enums;
 using Application.Models;
 using Application.Queries;
+using Application.Queries.Product;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Presentation.Mappers;

@@ -5,7 +5,7 @@ using Application.Services;
 using FuzzySharp;
 using Persistence;
 
-namespace Application.Queries;
+namespace Application.Queries.Product;
 
 public record SearchProductsQueryRequest
 {

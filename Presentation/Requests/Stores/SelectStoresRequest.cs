@@ -2,7 +2,7 @@
 
 public class SelectStoresRequest
 {
-    public int[] WoolworthStoreIds { get; init; } = [];
+    public string[] WoolworthStoreIds { get; init; } = [];
 
     public string[] PaknSaveStoreIds { get; init; } = [];
 }

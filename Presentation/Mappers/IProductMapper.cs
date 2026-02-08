@@ -1,5 +1,6 @@
 using Application.Models;
 using Application.Queries;
+using Application.Queries.Product;
 using Presentation.Requests.Product;
 using Presentation.Responses;
 using Presentation.Responses.Product;

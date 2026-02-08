@@ -47,7 +47,7 @@ public class WoolworthsThrottleService : IWoolworthsThrottleService
     /// <returns>A random timeout value in seconds</returns>
     public async Task GetRandomTimeoutSeconds()
     {
-        var timeput = _random.Next(300, 350);
+        var timeput = _random.Next(50, 120);
         await Task.Delay(timeput);
         Console.WriteLine($"@> TIMEOUT: {timeput}");
     }
