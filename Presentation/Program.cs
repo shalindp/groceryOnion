@@ -61,6 +61,16 @@ builder.Services.AddSingleton<IRegionMapper, RegionMapper>();
 builder.Services.AddSingleton<IUserMapper, UserMapper>();
 builder.Services.AddSingleton<IStoreMapper, StoreMapper>();
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", policy =>
+    {
+        policy
+            .AllowAnyOrigin()
+            .AllowAnyMethod()
+            .AllowAnyHeader();
+    });
+});
 
 var app = builder.Build();
 
@@ -71,6 +81,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseCors("AllowAll");
 
 app.UseAuthentication();
 app.UseAuthorization();

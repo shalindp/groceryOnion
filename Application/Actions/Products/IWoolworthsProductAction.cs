@@ -2,7 +2,6 @@
 using Application.Constants;
 using Application.Enums;
 using Application.Models;
-using Application.Queries;
 using Application.Queries.Product;
 using Persistence;
 
@@ -10,7 +9,8 @@ namespace Application.Actions.Products;
 
 public interface IWoolworthsProductAction
 {
-    public Task SyncProductsAsync();
+    public Task<QueriesSql.CreateProductsArgs[]> GetStoreProductsAsync(INpgsqlDbContext dbContext);
+
     public Task<IList<Categoery>> GetAllCategoriesAsync();
     public Task<ProductPriceQueryRequest[]> GetProductPricesAsync(List<WoolworthsStoreSkuAndSessionArg> ags);
 
@@ -24,15 +24,13 @@ public record WoolworthsPricingResponse(string StoreId, double Price);
 public class WoolworthsProductAction : IWoolworthsProductAction
 {
     private readonly IHttpHelper _httpHelper;
-    private readonly INpgsqlDbContext _dbContext;
     private readonly IWoolworthsStoreAction _woolworthsStoreAction;
     private readonly Random _random = new Random();
 
-    public WoolworthsProductAction(IHttpHelper httpHelper, INpgsqlDbContext dbContext,
+    public WoolworthsProductAction(IHttpHelper httpHelper,
         IWoolworthsStoreAction woolworthsStoreAction)
     {
         _httpHelper = httpHelper;
-        _dbContext = dbContext;
         _woolworthsStoreAction = woolworthsStoreAction;
     }
 
@@ -187,28 +185,8 @@ public class WoolworthsProductAction : IWoolworthsProductAction
         return productPriceQueryRequest;
     }
 
-    public async Task SyncProductsAsync()
+    public async Task< QueriesSql.CreateProductsArgs[]> GetStoreProductsAsync(INpgsqlDbContext dbContext)
     {
-        // var sessions = await _woolworthsRegionAction.CreateSessionWithRegionsAsync([861615, 2176651, 2770176, 2673967, 913420]);
-        //
-        //
-        // var tasks = new List<Task<IList<StoreProduct>>>();
-        // foreach (var session in sessions)
-        // {
-        //     var headers = new Dictionary<string, string>
-        //         {
-        //             ["ASP.NET_SessionId"] = session.SessionId,
-        //             ["aga"] = session.Aga,
-        //         }.Concat(Headers.WoolworthsDefaultHeaders)
-        //         .ToDictionary(k => k.Key, v => v.Value);
-        //     var productsTask = GetAllProductsAsync(headers);
-        //     tasks.Add(productsTask);
-        // }
-        //
-        // var xx = await Task.WhenAll(tasks);
-        //
-
-        // return;
         var products = await GetAllProductsAsync(new Dictionary<string, string>());
 
         var distinctProducts = products
@@ -217,7 +195,7 @@ public class WoolworthsProductAction : IWoolworthsProductAction
 
         var skus = distinctProducts.Select(c => c.Barcode).ToArray();
 
-        var existingProductsResult = (await _dbContext.Queries.GetStoreProducts(
+        var existingProductsResult = (await dbContext.Queries.GetStoreProducts(
                 new QueriesSql.GetStoreProductsArgs(
                     Skus: skus,
                     StoreName: StoreName.Woolworths.ToDescription()
@@ -239,7 +217,7 @@ public class WoolworthsProductAction : IWoolworthsProductAction
 
                 if (nameChanged || brandChanged || imageUrlChanged || maxQuantityChanged)
                 {
-                    await _dbContext.Queries.UpdateStoreProduct(
+                    await dbContext.Queries.UpdateStoreProduct(
                         new QueriesSql.UpdateStoreProductArgs()
                         {
                             Barcode = product.Barcode,
@@ -263,7 +241,8 @@ public class WoolworthsProductAction : IWoolworthsProductAction
             throw new Exception($"{StoreName.Woolworths.ToDescription()} Too many products with empty barcode, likely an error in fetching products");
         }
 
-        await _dbContext.Queries.CreateProducts([
+        QueriesSql.CreateProductsArgs[] finalProductsToInset =
+        [
             ..productsToInsert.Select(c =>
                 new QueriesSql.CreateProductsArgs
                 {
@@ -276,7 +255,8 @@ public class WoolworthsProductAction : IWoolworthsProductAction
                     UnitAndSize = c.UnitAndSize,
                     StoreSku = c.StoreSku
                 })
-        ]);
+        ];
+        return finalProductsToInset;
     }
 
     private record CategoryResponse(IList<SpecialResponse> Specials);

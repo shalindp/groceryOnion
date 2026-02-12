@@ -2,6 +2,7 @@
 using Application.Actions.Regions;
 using Application.Enums;
 using Application.Interfaces;
+using Persistence;
 
 namespace Application.Commands.Products;
 
@@ -12,42 +13,45 @@ public record SyncStoreProductsRequest
 
 public class SyncStoreProductsCommand : ICommand<bool, SyncStoreProductsRequest>
 {
+    private readonly INpgsqlDbContext _dbContext;
     private readonly IWoolworthsProductAction _woolworthsProductAction;
     private readonly IPaknSaveProductAction _paknSaveProductAction;
 
-    public SyncStoreProductsCommand(IWoolworthsProductAction woolworthsProductAction, IPaknSaveProductAction paknSaveProductAction)
+    public SyncStoreProductsCommand(IWoolworthsProductAction woolworthsProductAction, IPaknSaveProductAction paknSaveProductAction, INpgsqlDbContext dbContext)
     {
         _woolworthsProductAction = woolworthsProductAction;
         _paknSaveProductAction = paknSaveProductAction;
+        _dbContext = dbContext;
     }
 
     public async Task<bool> SendAsync(SyncStoreProductsRequest request)
     {
         var storesToSync = request.Stores ?? [StoreName.Woolworths, StoreName.NewWorld, StoreName.PaknSave];
 
-        var tasks = new List<Task?>();
-        
+        var tasks = new List<Task<QueriesSql.CreateProductsArgs[]>>();
+
         foreach (var storeName in storesToSync)
         {
             switch (storeName)
             {
                 case StoreName.Woolworths:
                 {
-                    var woolworthsTask = _woolworthsProductAction.SyncProductsAsync();
+                    var woolworthsTask = _woolworthsProductAction.GetStoreProductsAsync(_dbContext);
                     tasks.Add(woolworthsTask);
                     break;
                 }
                 case StoreName.PaknSave:
                 {
-                    var paknsaveTask =  _paknSaveProductAction.SyncProductsAsync();
-                    tasks.Add(paknsaveTask);
+                    var paknSaveTask = _paknSaveProductAction.GetStoreProductsAsync(_dbContext);
+                    tasks.Add(paknSaveTask);
                     break;
                 }
             }
         }
 
-        await Task.WhenAll(tasks);
+        var finalProducts = (await Task.WhenAll(tasks)).SelectMany(c => c).ToList();
 
+        await _dbContext.Queries.CreateProducts(finalProducts);
 
         return true;
     }

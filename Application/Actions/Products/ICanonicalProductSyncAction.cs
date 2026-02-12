@@ -5,18 +5,11 @@ namespace Application.Actions.Products;
 
 public interface ICanonicalProductSyncAction
 {
-    public Task SyncToCanonicalProducts();
+    public Task<List<QueriesSql.CreateCanonicalStoreProductsArgs>> BuildToCanonicalProductsAsync(INpgsqlDbContext dbContext);
 }
 
 public class CanonicalProductSyncAction : ICanonicalProductSyncAction
 {
-    private readonly INpgsqlDbContext _dbContext;
-
-    public CanonicalProductSyncAction(INpgsqlDbContext dbContext)
-    {
-        _dbContext = dbContext;
-    }
-
     void AddToMap(Dictionary<string, List<StoreProduct>> barcodeMap, List<StoreProduct> products)
     {
         foreach (var product in products)
@@ -34,15 +27,15 @@ public class CanonicalProductSyncAction : ICanonicalProductSyncAction
         }
     }
 
-    public async Task SyncToCanonicalProducts()
+    public async Task<List<QueriesSql.CreateCanonicalStoreProductsArgs>> BuildToCanonicalProductsAsync(INpgsqlDbContext dbContext)
     {
-        var woolworthProducts = (await _dbContext.Queries.GetStoreProductsByStore(
+        var woolworthProducts = (await dbContext.Queries.GetStoreProductsByStore(
             new QueriesSql.GetStoreProductsByStoreArgs()
             {
                 StoreName = StoreName.Woolworths.ToDescription(),
             })).Select(c => c.StoreProduct!.Value).ToList();
 
-        var paknSaveProducts = (await _dbContext.Queries.GetStoreProductsByStore(
+        var paknSaveProducts = (await dbContext.Queries.GetStoreProductsByStore(
             new QueriesSql.GetStoreProductsByStoreArgs()
             {
                 StoreName = StoreName.PaknSave.ToDescription(),
@@ -78,21 +71,18 @@ public class CanonicalProductSyncAction : ICanonicalProductSyncAction
                 new MutableCreateCanonicalStoreProducts(c.StoreProductId)).ToList();
         }
 
-        await _dbContext.Queries.CreateCanonicalProducts(createCanonicalProductArgs);
+        await dbContext.Queries.CreateCanonicalProducts(createCanonicalProductArgs);
 
         var barcodes = mutableCanonicalStoreProductsArgs.Keys.ToArray();
 
-        var canonicalProducts = (await _dbContext.Queries.GetCanonicalProducts(new QueriesSql.GetCanonicalProductsArgs
+        var canonicalProducts = (await dbContext.Queries.GetCanonicalProducts(new QueriesSql.GetCanonicalProductsArgs
         {
             Barcodes = barcodes,
         })).Select(c => c.Product!.Value).ToList();
 
         foreach (var canonicalProduct in canonicalProducts)
         {
-            mutableCanonicalStoreProductsArgs[canonicalProduct.Barcode].ForEach(c =>
-            {
-                c.CanonicalProductId = canonicalProduct.ProductId;
-            });
+            mutableCanonicalStoreProductsArgs[canonicalProduct.Barcode].ForEach(c => { c.CanonicalProductId = canonicalProduct.ProductId; });
         }
 
         var createCanonicalStoreProductsArgs = mutableCanonicalStoreProductsArgs.SelectMany(c => c.Value)
@@ -101,8 +91,8 @@ public class CanonicalProductSyncAction : ICanonicalProductSyncAction
                 ProductId = c.CanonicalProductId,
                 StoreProductId = c.StoreProductId,
             }).ToList();
-
-        await _dbContext.Queries.CreateCanonicalStoreProducts(createCanonicalStoreProductsArgs);
+        
+        return createCanonicalStoreProductsArgs;
     }
 
     private record MutableCreateCanonicalStoreProducts(Guid StoreProductId)

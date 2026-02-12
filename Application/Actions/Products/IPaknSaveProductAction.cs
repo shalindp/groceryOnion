@@ -12,7 +12,7 @@ namespace Application.Actions.Products;
 
 public interface IPaknSaveProductAction
 {
-    public Task SyncProductsAsync();
+    public Task<QueriesSql.CreateProductsArgs[]>  GetStoreProductsAsync(INpgsqlDbContext dbContext);
     public Task<ProductPriceQueryRequest> GetProductPricingAsync(ProductPriceQueryRequest productPriceQueryRequest, string accessToken);
 }
 
@@ -32,7 +32,7 @@ public class PaknSaveProductAction : IPaknSaveProductAction
         _paknSaveSessionAction = paknSaveSessionAction;
     }
 
-    public async Task SyncProductsAsync()
+    public async Task<QueriesSql.CreateProductsArgs[]>  GetStoreProductsAsync(INpgsqlDbContext dbContext)
     {
         var products = await GetAllProductsAsync();
 
@@ -88,7 +88,8 @@ public class PaknSaveProductAction : IPaknSaveProductAction
             throw new Exception($"{StoreName.PaknSave.ToDescription()} Too many products with empty barcode, likely an error in fetching products");
         }
 
-        await _dbContext.Queries.CreateProducts([
+        QueriesSql.CreateProductsArgs[] finalProductsToInsert =
+        [
             ..productsToInsert.Select(c =>
                 new QueriesSql.CreateProductsArgs
                 {
@@ -101,7 +102,9 @@ public class PaknSaveProductAction : IPaknSaveProductAction
                     UnitAndSize = c.UnitAndSize,
                     StoreSku = c.StoreSku
                 })
-        ]);
+        ];
+        
+        return finalProductsToInsert;
     }
 
     private record ProductsResponse(ProductResponse[] Products, int TotalPages);
