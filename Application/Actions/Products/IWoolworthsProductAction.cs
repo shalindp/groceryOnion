@@ -10,16 +10,12 @@ namespace Application.Actions.Products;
 public interface IWoolworthsProductAction
 {
     public Task<QueriesSql.CreateProductsArgs[]> GetStoreProductsAsync(INpgsqlDbContext dbContext);
-
     public Task<IList<Categoery>> GetAllCategoriesAsync();
-    public Task<ProductPriceQueryRequest[]> GetProductPricesAsync(List<WoolworthsStoreSkuAndSessionArg> ags);
-
+    public Task<ProductPriceQueryRequest[]> GetProductPricesAsync(List<WoolworthsStoreSkuAndSessionActionArg> ags);
     public Task<ProductPriceQueryRequest> GetProductPriceAsync(ProductPriceQueryRequest productPriceQueryRequest, WoolworthsSession session);
 }
 
-public record WoolworthsStoreSkuAndSessionArg(ProductPriceQueryRequest ProductPriceQueryRequest, WoolworthsSession Session);
-
-public record WoolworthsPricingResponse(string StoreId, double Price);
+public record WoolworthsStoreSkuAndSessionActionArg(ProductPriceQueryRequest ProductPriceQueryRequest, WoolworthsSession Session);
 
 public class WoolworthsProductAction : IWoolworthsProductAction
 {
@@ -50,7 +46,6 @@ public class WoolworthsProductAction : IWoolworthsProductAction
         string Brand,
         ImageResponse Images,
         PriceResponse Price,
-        ProductTagResponse ProductTag,
         QuantityResponse Quantity,
         SizeResponse Size
     );
@@ -60,10 +55,6 @@ public class WoolworthsProductAction : IWoolworthsProductAction
     private record QuantityResponse(double Max);
 
     private record PriceResponse(double OriginalPrice, double SalePrice);
-
-    private record ProductTagResponse(MultiBuyResponse? MultiBuy);
-
-    private record MultiBuyResponse(double Quantity, double MultiCupValue);
 
     private record SizeResponse(string CupMeasure, string VolumesSize, string VolumeSize);
 
@@ -131,17 +122,8 @@ public class WoolworthsProductAction : IWoolworthsProductAction
         }
     }
 
-    // public async Task<IList<ProductDto>> SearchProductsAsync(string term, int limit, int skip)
-    // {
-    //     var result = await _dbContext.Queries.SearchProducts(
-    //         new QueriesSql.SearchProductsArgs(term, skip, limit));
-    //
-    //     return result.Select(c => ProductDto.Map(c.CanonicalProduct!.Value!)).ToList();
-    // }
 
-    private record ProductPriceResponse(PriceResponse Price);
-
-    public async Task<ProductPriceQueryRequest[]> GetProductPricesAsync(List<WoolworthsStoreSkuAndSessionArg> ags)
+    public async Task<ProductPriceQueryRequest[]> GetProductPricesAsync(List<WoolworthsStoreSkuAndSessionActionArg> ags)
     {
         var list = new List<Task<ProductPriceQueryRequest>>();
         foreach (var arg in ags)
@@ -153,39 +135,41 @@ public class WoolworthsProductAction : IWoolworthsProductAction
         return await Task.WhenAll(list);
     }
 
-    public int GetRandomTimeoutSeconds()
-    {
-        var timeput = _random.Next(200, 220);
-        Console.WriteLine($"@> TIMEOUT: {timeput}");
-        return timeput;
-    }
-
     public async Task<ProductPriceQueryRequest> GetProductPriceAsync(ProductPriceQueryRequest productPriceQueryRequest, WoolworthsSession session)
     {
-        // Console.WriteLine($"@> FETCH SKU:{storeSku} - ADDRESS:{session.AddressId}");
         var url = $"https://www.woolworths.co.nz/api/v1/products/{productPriceQueryRequest.StoreSku}";
 
-        var headers = new Dictionary<string, string>
-            {
-                ["ASP.NET_SessionId"] = session.SessionId,
-                ["aga"] = session.Aga,
-            }.Concat(Headers.WoolworthsDefaultHeaders)
-            .ToDictionary(k => k.Key, v => v.Value);
 
         try
         {
-            var result = await _httpHelper.GetAsync<ProductPriceResponse>(url, headers: headers, freshSession: true);
-            productPriceQueryRequest.Price = result.Body.Price.OriginalPrice;
+            var result = (await _httpHelper.GetAsync<ProductPriceResponse>(url, headers: Headers.WoolworthsDefaultHeaders, cookies: session.Cookies))
+                .Body;
+
+            var store = result.Context.Fulfilment.Address;
+            productPriceQueryRequest.Price = result.Price.OriginalPrice;
+            productPriceQueryRequest.RegionStoreName = store;
+
+            foreach (var productTagResponse in result.ProductTags)
+            {
+                if (productTagResponse.MultiBuy != null)
+                {
+                    productPriceQueryRequest.MultiBuys.Add(new ProductMultiBuy
+                    {
+                        PriceWhenQuantityIsMet = productTagResponse.MultiBuy.Value,
+                        QuantityRequired = productTagResponse.MultiBuy.Quantity
+                    });
+                }
+            }
         }
         catch (Exception e)
         {
-            Environment.FailFast("Critical unrecoverable error", e);
+            Console.WriteLine("Critical unrecoverable error", e);
         }
 
         return productPriceQueryRequest;
     }
 
-    public async Task< QueriesSql.CreateProductsArgs[]> GetStoreProductsAsync(INpgsqlDbContext dbContext)
+    public async Task<QueriesSql.CreateProductsArgs[]> GetStoreProductsAsync(INpgsqlDbContext dbContext)
     {
         var products = await GetAllProductsAsync(new Dictionary<string, string>());
 
@@ -273,4 +257,10 @@ public class WoolworthsProductAction : IWoolworthsProductAction
             .Select(c => new Categoery(c.Id, c.Label, c.Url, StoreName.Woolworths))
             .ToList();
     }
+
+    private record ProductPriceResponse(PriceResponse Price, ProductTagResponse[] ProductTags, ContextResponse Context);
+
+    private record ProductTagResponse(string TagType, MultiBuyResponse? MultiBuy);
+
+    private record MultiBuyResponse(double Quantity, double Value);
 }

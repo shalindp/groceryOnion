@@ -18,6 +18,7 @@ class ProductsPriceResponse {
     required this.storeId,
     required this.storeSku,
     required this.price,
+    this.multiBuys = const [],
   });
 
   String productId;
@@ -30,13 +31,16 @@ class ProductsPriceResponse {
 
   double price;
 
+  List<ProductMultiBuyResponse> multiBuys;
+
   @override
   bool operator ==(Object other) => identical(this, other) || other is ProductsPriceResponse &&
     other.productId == productId &&
     other.storeName == storeName &&
     other.storeId == storeId &&
     other.storeSku == storeSku &&
-    other.price == price;
+    other.price == price &&
+    _deepEquality.equals(other.multiBuys, multiBuys);
 
   @override
   int get hashCode =>
@@ -45,10 +49,11 @@ class ProductsPriceResponse {
     (storeName.hashCode) +
     (storeId.hashCode) +
     (storeSku.hashCode) +
-    (price.hashCode);
+    (price.hashCode) +
+    (multiBuys.hashCode);
 
   @override
-  String toString() => 'ProductsPriceResponse[productId=$productId, storeName=$storeName, storeId=$storeId, storeSku=$storeSku, price=$price]';
+  String toString() => 'ProductsPriceResponse[productId=$productId, storeName=$storeName, storeId=$storeId, storeSku=$storeSku, price=$price, multiBuys=$multiBuys]';
 
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{};
@@ -57,6 +62,7 @@ class ProductsPriceResponse {
       json[r'storeId'] = this.storeId;
       json[r'storeSku'] = this.storeSku;
       json[r'price'] = this.price;
+      json[r'multiBuys'] = this.multiBuys;
     return json;
   }
 
@@ -84,6 +90,7 @@ class ProductsPriceResponse {
         storeId: mapValueOfType<String>(json, r'storeId')!,
         storeSku: mapValueOfType<String>(json, r'storeSku')!,
         price: mapValueOfType<double>(json, r'price')!,
+        multiBuys: ProductMultiBuyResponse.listFromJson(json[r'multiBuys']),
       );
     }
     return null;
@@ -136,6 +143,7 @@ class ProductsPriceResponse {
     'storeId',
     'storeSku',
     'price',
+    'multiBuys',
   };
 }
 

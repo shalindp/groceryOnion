@@ -94,8 +94,8 @@ where username = @username
 limit 1;
 
 -- name: createWoolworthsSession :copyfrom
-insert into woolworths_session (session_id, aga, store_id, expires_utc)
-values (@session_id, @aga, @store_id, @expires_utc);
+insert into woolworths_session (store_id, cookies, expires_utc)
+values (@store_id, @cookies, @expires_utc);
 
 -- name: getWoolworthsSession :many
 select sqlc.embed(woolworths_session)

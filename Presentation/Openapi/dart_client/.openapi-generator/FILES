@@ -4,6 +4,7 @@ README.md
 analysis_options.yaml
 doc/Categoery.md
 doc/ProductApi.md
+doc/ProductMultiBuyResponse.md
 doc/ProductResponse.md
 doc/ProductsPriceRequest.md
 doc/ProductsPriceResponse.md
@@ -31,6 +32,7 @@ lib/auth/http_basic_auth.dart
 lib/auth/http_bearer_auth.dart
 lib/auth/oauth.dart
 lib/model/categoery.dart
+lib/model/product_multi_buy_response.dart
 lib/model/product_response.dart
 lib/model/products_price_request.dart
 lib/model/products_price_response.dart
@@ -43,3 +45,4 @@ lib/model/store_name.dart
 lib/model/store_response.dart
 lib/model/store_sku_dto.dart
 pubspec.yaml
+test/product_multi_buy_response_test.dart

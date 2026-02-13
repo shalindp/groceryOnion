@@ -1,4 +1,4 @@
-using Application.Models;
+using Application.Actions.Session;
 using Presentation.Responses;
 using Riok.Mapperly.Abstractions;
 
@@ -6,11 +6,11 @@ namespace Presentation.Mappers;
 
 public interface IRegionMapper
 {
-    public IList<CreateSessionWithRegionResponse> Map(IList<CreateSessionWithRegionDto> source);
+    public IList<WoolworthSessionResponse> Map(IList<WoolworthsSessionAction> source);
 }
 
 [Mapper]
 public partial class RegionMapper : IRegionMapper
 {
-   public partial IList<CreateSessionWithRegionResponse> Map(IList<CreateSessionWithRegionDto> source);
+   public partial IList<WoolworthSessionResponse> Map(IList<WoolworthsSessionAction> source);
 }

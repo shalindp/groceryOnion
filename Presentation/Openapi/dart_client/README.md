@@ -73,6 +73,7 @@ Class | Method | HTTP request | Description
 ## Documentation For Models
 
  - [Categoery](doc//Categoery.md)
+ - [ProductMultiBuyResponse](doc//ProductMultiBuyResponse.md)
  - [ProductResponse](doc//ProductResponse.md)
  - [ProductsPriceRequest](doc//ProductsPriceRequest.md)
  - [ProductsPriceResponse](doc//ProductsPriceResponse.md)

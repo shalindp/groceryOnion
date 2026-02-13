@@ -11,8 +11,16 @@ public class ProductPriceQueryRequest
     public Guid ProductId { get; set; }
     public StoreName StoreName { get; init; }
     public string StoreId { get; init; }
+    public string RegionStoreName { get; set; }
     public string StoreSku { get; init; }
     public double Price { get; set; } = 0.0;
+    public IList<ProductMultiBuy> MultiBuys = new List<ProductMultiBuy>();
+}
+
+public class ProductMultiBuy
+{
+    public double PriceWhenQuantityIsMet { get; init; } = 0;
+    public double QuantityRequired { get; init; } = 0;
 }
 
 public class GetProductsPricingQuery : IQuery<ProductPriceQueryRequest[], ProductPriceQueryRequest[]>
@@ -44,15 +52,12 @@ public class GetProductsPricingQuery : IQuery<ProductPriceQueryRequest[], Produc
             .Select(c => c.WoolworthsSession)
             .ToList();
 
-        var woolworthTasks = new List<WoolworthsStoreSkuAndSessionArg>();
+        var woolworthTasks = new List<WoolworthsStoreSkuAndSessionActionArg>();
         foreach (var storePriceHolder in woolworthsRequests)
         {
             var session = woolworthsSessions.First(c => c.Value.StoreId.Equals(storePriceHolder.StoreId));
-            woolworthTasks.Add(new WoolworthsStoreSkuAndSessionArg(storePriceHolder, session.Value));
-            // var woolworthsTask = _woolworthsProductAction.GetProductPriceAsync(storePriceHolder, session!.Value);
-            // woolworthTasks.Add(woolworthsTask);
+            woolworthTasks.Add(new WoolworthsStoreSkuAndSessionActionArg(storePriceHolder, session.Value));
         }
-        
 
         var paknSaveRequests = request.Where(c => c.StoreName == StoreName.PaknSave)
             .ToArray();
@@ -66,8 +71,6 @@ public class GetProductsPricingQuery : IQuery<ProductPriceQueryRequest[], Produc
             paknSaveTasks.Add(task);
         }
 
-        // var x = async () => await Task.WhenAll(woolworthTasks);
-        
         var woolworthsPrices = _woolworthsThrottleService.ExecuteAsync(()=> _woolworthsProductAction.GetProductPricesAsync(woolworthTasks));
         var paknSavePrices = Task.WhenAll(paknSaveTasks);
 

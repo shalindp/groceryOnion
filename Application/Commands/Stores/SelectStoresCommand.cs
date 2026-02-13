@@ -18,19 +18,17 @@ public class SelectStoresCommand : ICommand<bool, SelectStoresCommandRequest>
 {
     private readonly INpgsqlDbContext _dbContext;
     private readonly IUserContext _userContext;
-    private readonly IWoolworthsStoreAction _woolworthsStoreAction;
-    private readonly IPaknSaveProductAction _paknSaveProductAction;
     private readonly IPaknSaveSessionAction _paknSaveSessionAction;
+    private readonly IWoolworthsSessionAction _woolworthsSessionAction;
 
-
-    public SelectStoresCommand(INpgsqlDbContext dbContext, IUserContext userContext, IWoolworthsStoreAction woolworthsStoreAction, IPaknSaveProductAction paknSaveProductAction, IPaknSaveSessionAction paknSaveSessionAction)
+    public SelectStoresCommand(INpgsqlDbContext dbContext, IUserContext userContext, IPaknSaveSessionAction paknSaveSessionAction, IWoolworthsSessionAction woolworthsSessionAction)
     {
         _dbContext = dbContext;
         _userContext = userContext;
-        _woolworthsStoreAction = woolworthsStoreAction;
-        _paknSaveProductAction = paknSaveProductAction;
         _paknSaveSessionAction = paknSaveSessionAction;
+        _woolworthsSessionAction = woolworthsSessionAction;
     }
+
 
     public async Task<bool> SendAsync(SelectStoresCommandRequest request)
     {
@@ -39,7 +37,7 @@ public class SelectStoresCommand : ICommand<bool, SelectStoresCommandRequest>
             var existingSessions = (await _dbContext.Queries.getWoolworthsSession(
                     new QueriesSql.getWoolworthsSessionArgs
                     {
-                        StoreIds = request.WoolworthStoreIds,
+                        StoreIds = ["awwa"]
                     })).Select(c => c.WoolworthsSession)
                 .ToList();
 
@@ -47,13 +45,12 @@ public class SelectStoresCommand : ICommand<bool, SelectStoresCommandRequest>
                 .Where(c => !existingSessions.Select(o => o?.StoreId).Contains(c))
                 .ToArray();
 
-            var newSessions = await _woolworthsStoreAction.CreateSessionWithRegionsAsync(sessionsToCreate);
+            var newSessions = await _woolworthsSessionAction.CreateSessionWithRegionsAsync(sessionsToCreate);
 
             var sessionArgs = newSessions.Select(c => new QueriesSql.createWoolworthsSessionArgs()
             {
                 StoreId = c.StoreId,
-                SessionId = c.SessionId,
-                Aga = c.Aga,
+                Cookies = c.Cookies,
                 ExpiresUtc = DateTime.UtcNow.AddMinutes(15)
             }).ToList();
 

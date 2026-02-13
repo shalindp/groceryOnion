@@ -50,8 +50,6 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddAuthorization();
 
 builder.Services.AddHttpContextAccessor();
-builder.Services.AddScoped<IHttpHelper, HttpHelper>();
-
 
 PersistenceModule.AddToService(builder.Services);
 ApplicationModule.AddToService(builder.Services);

@@ -18,8 +18,8 @@ public class SyncCanonicalProductsCommand : ICommand<bool>
 
     public async Task<bool> SendAsync()
     {
-        var createCanonicalStoreProductsArgs = await _canonicalProductSyncAction.BuildToCanonicalProductsAsync(_dbContext);
-        await _dbContext.Queries.CreateCanonicalStoreProducts(createCanonicalStoreProductsArgs);
+        var canonicalStoreProducts = await _canonicalProductSyncAction.BuildCanonicalProductsAsync(_dbContext);
+        await _dbContext.Queries.CreateCanonicalStoreProducts(canonicalStoreProducts);
      
         return true;
     }

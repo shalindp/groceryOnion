@@ -5,7 +5,7 @@ namespace Application.Actions.Products;
 
 public interface ICanonicalProductSyncAction
 {
-    public Task<List<QueriesSql.CreateCanonicalStoreProductsArgs>> BuildToCanonicalProductsAsync(INpgsqlDbContext dbContext);
+    public Task<List<QueriesSql.CreateCanonicalStoreProductsArgs>> BuildCanonicalProductsAsync(INpgsqlDbContext dbContext);
 }
 
 public class CanonicalProductSyncAction : ICanonicalProductSyncAction
@@ -27,7 +27,7 @@ public class CanonicalProductSyncAction : ICanonicalProductSyncAction
         }
     }
 
-    public async Task<List<QueriesSql.CreateCanonicalStoreProductsArgs>> BuildToCanonicalProductsAsync(INpgsqlDbContext dbContext)
+    public async Task<List<QueriesSql.CreateCanonicalStoreProductsArgs>> BuildCanonicalProductsAsync(INpgsqlDbContext dbContext)
     {
         var woolworthProducts = (await dbContext.Queries.GetStoreProductsByStore(
             new QueriesSql.GetStoreProductsByStoreArgs()

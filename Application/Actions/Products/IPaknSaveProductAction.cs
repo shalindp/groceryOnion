@@ -12,7 +12,7 @@ namespace Application.Actions.Products;
 
 public interface IPaknSaveProductAction
 {
-    public Task<QueriesSql.CreateProductsArgs[]>  GetStoreProductsAsync(INpgsqlDbContext dbContext);
+    public Task<QueriesSql.CreateProductsArgs[]> GetStoreProductsAsync(INpgsqlDbContext dbContext);
     public Task<ProductPriceQueryRequest> GetProductPricingAsync(ProductPriceQueryRequest productPriceQueryRequest, string accessToken);
 }
 
@@ -32,7 +32,7 @@ public class PaknSaveProductAction : IPaknSaveProductAction
         _paknSaveSessionAction = paknSaveSessionAction;
     }
 
-    public async Task<QueriesSql.CreateProductsArgs[]>  GetStoreProductsAsync(INpgsqlDbContext dbContext)
+    public async Task<QueriesSql.CreateProductsArgs[]> GetStoreProductsAsync(INpgsqlDbContext dbContext)
     {
         var products = await GetAllProductsAsync();
 
@@ -103,7 +103,7 @@ public class PaknSaveProductAction : IPaknSaveProductAction
                     StoreSku = c.StoreSku
                 })
         ];
-        
+
         return finalProductsToInsert;
     }
 
@@ -116,18 +116,49 @@ public class PaknSaveProductAction : IPaknSaveProductAction
 
     private record ProductDetailsResponse(string ProductId, string Sku);
 
-    private record Pricing(double Price);
+    private record PricingResponse(double Price, PromotionResponse[]? PromotionList);
+
+    private record PromotionResponse(PromotionRewards[] PromotionRewards);
+
+    private record PromotionRewards(double RewardValue, PromotionConditions[] PromotionConditions);
+
+    private record PromotionConditions(double ThresholdQuantity);
 
     public async Task<ProductPriceQueryRequest> GetProductPricingAsync(ProductPriceQueryRequest productPriceQueryRequest, string accessToken)
     {
         var headers = PaknSaveHelper.BuildAuthenticationHeader(accessToken);
         var url = $"https://api-prod.paknsave.co.nz/v1/edge/store/{productPriceQueryRequest.StoreId}/product/{productPriceQueryRequest.StoreSku}";
 
-        var res = await _httpHelper.GetAsync<Pricing>(url, headers, ignoreHttpStatusCodes: [404]);
-        if (res?.Body?.Price != null)
+        var res = (await _httpHelper.GetAsync<PricingResponse>(url, headers, ignoreHttpStatusCodes: [404]))
+            .Body;
+        try
         {
-            productPriceQueryRequest.Price = res.Body.Price / 100;
-            return productPriceQueryRequest;
+            if (res?.Price != null)
+            {
+                productPriceQueryRequest.Price = res.Price / 100;
+
+                if (res.PromotionList != null)
+                {
+                    foreach (var promotionResponse in res.PromotionList)
+                    {
+                        foreach (var promotionResponsePromotionReward in promotionResponse.PromotionRewards)
+                        {
+                            foreach (var promotionCondition in promotionResponsePromotionReward.PromotionConditions)
+                            {
+                                productPriceQueryRequest.MultiBuys.Add(new ProductMultiBuy
+                                {
+                                    PriceWhenQuantityIsMet = promotionResponsePromotionReward.RewardValue / 100,
+                                    QuantityRequired = promotionCondition.ThresholdQuantity
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("paknsave error", ex);
         }
 
         return productPriceQueryRequest;

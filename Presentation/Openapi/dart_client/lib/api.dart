@@ -33,6 +33,7 @@ part 'api/store_api.dart';
 part 'api/user_api.dart';
 
 part 'model/categoery.dart';
+part 'model/product_multi_buy_response.dart';
 part 'model/product_response.dart';
 part 'model/products_price_request.dart';
 part 'model/products_price_response.dart';

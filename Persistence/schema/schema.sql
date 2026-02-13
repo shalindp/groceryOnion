@@ -107,8 +107,7 @@ create table selected_stores
 create table woolworths_session
 (
     store_id    varchar(255) not null,
-    session_id  varchar(255) not null,
-    aga         varchar(255) not null,
+    cookies     TEXT         not null,
     expires_utc timestamptz  not null
 );
 

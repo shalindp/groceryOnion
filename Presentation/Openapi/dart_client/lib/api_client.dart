@@ -184,6 +184,8 @@ class ApiClient {
           return value is DateTime ? value : DateTime.tryParse(value);
         case 'Categoery':
           return Categoery.fromJson(value);
+        case 'ProductMultiBuyResponse':
+          return ProductMultiBuyResponse.fromJson(value);
         case 'ProductResponse':
           return ProductResponse.fromJson(value);
         case 'ProductsPriceRequest':

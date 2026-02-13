@@ -17,6 +17,8 @@ public static class ApplicationModule
 {
     public static void AddToService(IServiceCollection services)
     {
+
+        services.AddScoped<IHttpHelper, HttpHelper>();
         services.AddSingleton<ICacheService, CacheService>();
         services.AddSingleton<IWoolworthsThrottleService>(new WoolworthsThrottleService(1));
         services.AddScoped<JwtAuthenticationService>();
@@ -24,6 +26,7 @@ public static class ApplicationModule
         services.AddScoped<IUserContext, UserContext>();
         services.AddScoped<IWoolworthsStoreAction, WoolworthsStoreAction>();
         services.AddScoped<IWoolworthsProductAction, WoolworthsProductAction>();
+        services.AddScoped<IWoolworthsSessionAction, WoolworthsSessionAction>();
         services.AddScoped<IPaknSaveProductAction, PaknSaveProductAction>();
         services.AddScoped<IPaknSaveSessionAction, PaknSaveSessionAction>();
         services.AddScoped<IPaknSaveStoreAction, PaknSaveStoreAction>();

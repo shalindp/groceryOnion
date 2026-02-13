@@ -691,8 +691,8 @@ public class QueriesSql
         return null;
     }
 
-    private const string createWoolworthsSessionSql = "COPY woolworths_session (session_id, aga, store_id, expires_utc) FROM STDIN (FORMAT BINARY)";
-    public readonly record struct createWoolworthsSessionArgs(string SessionId, string Aga, string StoreId, DateTime ExpiresUtc);
+    private const string createWoolworthsSessionSql = "COPY woolworths_session (store_id, cookies, expires_utc) FROM STDIN (FORMAT BINARY)";
+    public readonly record struct createWoolworthsSessionArgs(string StoreId, string Cookies, DateTime ExpiresUtc);
     public async Task createWoolworthsSession(List<createWoolworthsSessionArgs> args)
     {
         using (var connection = new NpgsqlConnection(ConnectionString))
@@ -703,9 +703,8 @@ public class QueriesSql
                 foreach (var row in args)
                 {
                     await writer.StartRowAsync();
-                    await writer.WriteAsync(row.SessionId);
-                    await writer.WriteAsync(row.Aga);
                     await writer.WriteAsync(row.StoreId);
+                    await writer.WriteAsync(row.Cookies);
                     await writer.WriteAsync(row.ExpiresUtc);
                 }
 
@@ -716,7 +715,7 @@ public class QueriesSql
         }
     }
 
-    private const string getWoolworthsSessionSql = "select woolworths_session.store_id, woolworths_session.session_id, woolworths_session.aga, woolworths_session.expires_utc from woolworths_session where store_id = any (@store_ids::varchar(255)[]) and expires_utc > now() order by expires_utc asc";
+    private const string getWoolworthsSessionSql = "select woolworths_session.store_id, woolworths_session.cookies, woolworths_session.expires_utc from woolworths_session where store_id = any (@store_ids::varchar(255)[]) and expires_utc > now() order by expires_utc asc";
     public readonly record struct getWoolworthsSessionRow(WoolworthsSession? WoolworthsSession);
     public readonly record struct getWoolworthsSessionArgs(string[] StoreIds);
     public async Task<List<getWoolworthsSessionRow>> getWoolworthsSession(getWoolworthsSessionArgs args)
@@ -732,7 +731,7 @@ public class QueriesSql
                     {
                         var result = new List<getWoolworthsSessionRow>();
                         while (await reader.ReadAsync())
-                            result.Add(new getWoolworthsSessionRow { WoolworthsSession = new WoolworthsSession { StoreId = reader.GetString(0), SessionId = reader.GetString(1), Aga = reader.GetString(2), ExpiresUtc = reader.GetDateTime(3) } });
+                            result.Add(new getWoolworthsSessionRow { WoolworthsSession = new WoolworthsSession { StoreId = reader.GetString(0), Cookies = reader.GetString(1), ExpiresUtc = reader.GetDateTime(2) } });
                         return result;
                     }
                 }
@@ -750,7 +749,7 @@ public class QueriesSql
             {
                 var result = new List<getWoolworthsSessionRow>();
                 while (await reader.ReadAsync())
-                    result.Add(new getWoolworthsSessionRow { WoolworthsSession = new WoolworthsSession { StoreId = reader.GetString(0), SessionId = reader.GetString(1), Aga = reader.GetString(2), ExpiresUtc = reader.GetDateTime(3) } });
+                    result.Add(new getWoolworthsSessionRow { WoolworthsSession = new WoolworthsSession { StoreId = reader.GetString(0), Cookies = reader.GetString(1), ExpiresUtc = reader.GetDateTime(2) } });
                 return result;
             }
         }
