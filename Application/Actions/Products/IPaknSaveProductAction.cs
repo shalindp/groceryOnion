@@ -12,7 +12,7 @@ namespace Application.Actions.Products;
 
 public interface IPaknSaveProductAction
 {
-    public Task<QueriesSql.CreateProductsArgs[]> GetStoreProductsAsync(INpgsqlDbContext dbContext);
+    public Task<QueriesSql.CreateProductsArgs[]> GetStoreProductsAsync(QueriesSql queriesSql);
     public Task<ProductPriceQueryRequest> GetProductPricingAsync(ProductPriceQueryRequest productPriceQueryRequest, string accessToken);
 }
 
@@ -21,20 +21,18 @@ public record PaknSavePricingResponse(string StoreId, double Price);
 public class PaknSaveProductAction : IPaknSaveProductAction
 {
     private readonly IHttpHelper _httpHelper;
-    private readonly INpgsqlDbContext _dbContext;
     private readonly IPaknSaveSessionAction _paknSaveSessionAction;
 
-    public PaknSaveProductAction(IHttpHelper httpHelper, INpgsqlDbContext dbContext,
+    public PaknSaveProductAction(IHttpHelper httpHelper,
         IPaknSaveSessionAction paknSaveSessionAction)
     {
         _httpHelper = httpHelper;
-        _dbContext = dbContext;
         _paknSaveSessionAction = paknSaveSessionAction;
     }
 
-    public async Task<QueriesSql.CreateProductsArgs[]> GetStoreProductsAsync(INpgsqlDbContext dbContext)
+    public async Task<QueriesSql.CreateProductsArgs[]> GetStoreProductsAsync(QueriesSql queriesSql)
     {
-        var products = await GetAllProductsAsync();
+        var products = await GetAllProductsAsync(queriesSql);
 
         var distinctProducts = products
             .DistinctBy(c => c.Barcode)
@@ -42,7 +40,7 @@ public class PaknSaveProductAction : IPaknSaveProductAction
 
         var skus = distinctProducts.Select(c => c.Barcode).ToArray();
 
-        var existingProductsResult = (await _dbContext.Queries.GetStoreProducts(
+        var existingProductsResult = (await queriesSql.GetStoreProducts(
                 new QueriesSql.GetStoreProductsArgs(
                     Skus: skus,
                     StoreName: StoreName.PaknSave.ToDescription()
@@ -64,7 +62,7 @@ public class PaknSaveProductAction : IPaknSaveProductAction
 
                 if (nameChanged || brandChanged || imageUrlChanged || maxQuantityChanged)
                 {
-                    await _dbContext.Queries.UpdateStoreProduct(
+                    await queriesSql.UpdateStoreProduct(
                         new QueriesSql.UpdateStoreProductArgs()
                         {
                             Barcode = product.Barcode,
@@ -193,9 +191,9 @@ public class PaknSaveProductAction : IPaknSaveProductAction
         return products;
     }
 
-    private async Task<IList<StoreProduct>> GetAllProductsAsync()
+    private async Task<IList<StoreProduct>> GetAllProductsAsync(QueriesSql queriesSql)
     {
-        var session = await _paknSaveSessionAction.CreateSessionAsync();
+        var session = await _paknSaveSessionAction.GetOrCreateSessionAsync(queriesSql);
         var headers = PaknSaveHelper.BuildAuthenticationHeader(session.AccessToken);
         var categories = await GetAllCategoriesAsync(headers);
 

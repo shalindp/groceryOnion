@@ -5,28 +5,24 @@ namespace Application.Actions.Session;
 
 public interface IPaknSaveSessionAction
 {
-    public Task<PaknsaveSession> GetOrCreateSessionAsync();
-    public Task<PaknsaveSession> CreateSessionAsync();
-
+    public Task<PaknsaveSession> GetOrCreateSessionAsync(QueriesSql dbContext);
 }
 
 class PaknSaveSessionAction : IPaknSaveSessionAction
 {
-    private readonly INpgsqlDbContext _dbContext;
     private readonly IHttpHelper _httpHelper;
 
-    public PaknSaveSessionAction(INpgsqlDbContext dbContext, IHttpHelper httpHelper)
+    public PaknSaveSessionAction(IHttpHelper httpHelper)
     {
-        _dbContext = dbContext;
         _httpHelper = httpHelper;
     }
 
-    public async Task<PaknsaveSession> GetOrCreateSessionAsync()
+    public async Task<PaknsaveSession> GetOrCreateSessionAsync(QueriesSql dbContext)
     {
-        var pakSaveSession = (await _dbContext.Queries.getPaknSaveSession())?.PaknsaveSession;
+        var pakSaveSession = (await dbContext.getPaknSaveSession())?.PaknsaveSession;
         if (pakSaveSession?.AccessToken == null)
         {
-            return await CreateSessionAsync();
+            return await CreateSessionAsync(dbContext);
         }
 
         return pakSaveSession.Value;
@@ -34,7 +30,7 @@ class PaknSaveSessionAction : IPaknSaveSessionAction
 
     private record CreateTokenResponse(string access_token);
 
-    public async Task<PaknsaveSession> CreateSessionAsync()
+    public async Task<PaknsaveSession> CreateSessionAsync(QueriesSql dbContext)
     {
         const string url = "https://www.paknsave.co.nz/api/user/get-current-user";
         var body = new Dictionary<string, string>()
@@ -45,7 +41,7 @@ class PaknSaveSessionAction : IPaknSaveSessionAction
         };
 
         var response = await _httpHelper.PostAsync<CreateTokenResponse>(url, payload: body);
-        var result = (await _dbContext.Queries.createPaknSaveSession(new QueriesSql.createPaknSaveSessionArgs()
+        var result = (await dbContext.createPaknSaveSession(new QueriesSql.createPaknSaveSessionArgs()
         {
             AccessToken = response.Body!.access_token,
             ExpiresUtc = DateTime.UtcNow.AddMinutes(15)

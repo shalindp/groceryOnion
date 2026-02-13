@@ -32,55 +32,19 @@ public class SelectStoresCommand : ICommand<bool, SelectStoresCommandRequest>
 
     public async Task<bool> SendAsync(SelectStoresCommandRequest request)
     {
-        if (request.WoolworthStoreIds.Length != 0)
+        return await _dbContext.WithTransactionAsync(async (dbContext) =>
         {
-            var existingSessions = (await _dbContext.Queries.getWoolworthsSession(
-                    new QueriesSql.getWoolworthsSessionArgs
-                    {
-                        StoreIds = ["awwa"]
-                    })).Select(c => c.WoolworthsSession)
-                .ToList();
-
-            var sessionsToCreate = request.WoolworthStoreIds
-                .Where(c => !existingSessions.Select(o => o?.StoreId).Contains(c))
-                .ToArray();
-
-            var newSessions = await _woolworthsSessionAction.CreateSessionWithRegionsAsync(sessionsToCreate);
-
-            var sessionArgs = newSessions.Select(c => new QueriesSql.createWoolworthsSessionArgs()
+            if (request.WoolworthStoreIds.Length != 0)
             {
-                StoreId = c.StoreId,
-                Cookies = c.Cookies,
-                ExpiresUtc = DateTime.UtcNow.AddMinutes(15)
-            }).ToList();
-
-            await _dbContext.Queries.createWoolworthsSession(sessionArgs);
-        }
-
-        if (request.PaknSaveStoreIds.Length != 0)
-        {
-            var x = await _dbContext.Queries.getPaknSaveSession();
-            if (x == null)
-            {
-                await _paknSaveSessionAction.GetOrCreateSessionAsync();
+                await _woolworthsSessionAction.GetOrCreateSessionAsync(dbContext, request.WoolworthStoreIds);
             }
-        }
 
-        // var selectedWoolworthsStores = request.WoolworthStoreIds
-        //     .Select(c =>
-        //         new QueriesSql.addSelectedStoreArgs(_userContext.UserId, StoreName.Woolworths.ToDescription(),
-        //             c.ToString()))
-        //     .ToList();
-        //
-        // var selectedPaknSaveStores = request.PaknSaveStoreIds
-        //     .Select(c =>
-        //         new QueriesSql.addSelectedStoreArgs(_userContext.UserId, StoreName.PaknSave.ToDescription(), c))
-        //     .ToList();
+            if (request.PaknSaveStoreIds.Length != 0)
+            {
+                await _paknSaveSessionAction.GetOrCreateSessionAsync(dbContext);
+            }
 
-        // var selectedStores = selectedWoolworthsStores.Concat(selectedPaknSaveStores).ToList();
-
-        // await _dbContext.Queries.addSelectedStore(selectedStores);
-
-        return true;
+            return true;
+        });
     }
 }

@@ -9,7 +9,7 @@ namespace Application.Actions.Products;
 
 public interface IWoolworthsProductAction
 {
-    public Task<QueriesSql.CreateProductsArgs[]> GetStoreProductsAsync(INpgsqlDbContext dbContext);
+    public Task<QueriesSql.CreateProductsArgs[]> GetStoreProductsAsync(QueriesSql queriesSql);
     public Task<IList<Categoery>> GetAllCategoriesAsync();
     public Task<ProductPriceQueryRequest[]> GetProductPricesAsync(List<WoolworthsStoreSkuAndSessionActionArg> ags);
     public Task<ProductPriceQueryRequest> GetProductPriceAsync(ProductPriceQueryRequest productPriceQueryRequest, WoolworthsSession session);
@@ -169,7 +169,7 @@ public class WoolworthsProductAction : IWoolworthsProductAction
         return productPriceQueryRequest;
     }
 
-    public async Task<QueriesSql.CreateProductsArgs[]> GetStoreProductsAsync(INpgsqlDbContext dbContext)
+    public async Task<QueriesSql.CreateProductsArgs[]> GetStoreProductsAsync(QueriesSql queriesSql)
     {
         var products = await GetAllProductsAsync(new Dictionary<string, string>());
 
@@ -179,7 +179,7 @@ public class WoolworthsProductAction : IWoolworthsProductAction
 
         var skus = distinctProducts.Select(c => c.Barcode).ToArray();
 
-        var existingProductsResult = (await dbContext.Queries.GetStoreProducts(
+        var existingProductsResult = (await queriesSql.GetStoreProducts(
                 new QueriesSql.GetStoreProductsArgs(
                     Skus: skus,
                     StoreName: StoreName.Woolworths.ToDescription()
@@ -201,7 +201,7 @@ public class WoolworthsProductAction : IWoolworthsProductAction
 
                 if (nameChanged || brandChanged || imageUrlChanged || maxQuantityChanged)
                 {
-                    await dbContext.Queries.UpdateStoreProduct(
+                    await queriesSql.UpdateStoreProduct(
                         new QueriesSql.UpdateStoreProductArgs()
                         {
                             Barcode = product.Barcode,

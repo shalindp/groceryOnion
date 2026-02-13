@@ -691,31 +691,51 @@ public class QueriesSql
         return null;
     }
 
-    private const string createWoolworthsSessionSql = "COPY woolworths_session (store_id, cookies, expires_utc) FROM STDIN (FORMAT BINARY)";
-    public readonly record struct createWoolworthsSessionArgs(string StoreId, string Cookies, DateTime ExpiresUtc);
-    public async Task createWoolworthsSession(List<createWoolworthsSessionArgs> args)
+    private const string CreateWoolworthsSessionsSql = "INSERT INTO woolworths_session (store_id, cookies, expires_utc) SELECT unnest(@store_ids::varchar(255)[]), unnest(@cookies::text[]), @expires RETURNING woolworths_session.store_id, woolworths_session.cookies, woolworths_session.expires_utc";
+    public readonly record struct CreateWoolworthsSessionsRow(WoolworthsSession? WoolworthsSession);
+    public readonly record struct CreateWoolworthsSessionsArgs(string[] StoreIds, string[] Cookies, DateTime Expires);
+    public async Task<List<CreateWoolworthsSessionsRow>> CreateWoolworthsSessions(CreateWoolworthsSessionsArgs args)
     {
-        using (var connection = new NpgsqlConnection(ConnectionString))
+        if (this.Transaction == null)
         {
-            await connection.OpenAsync();
-            using (var writer = await connection.BeginBinaryImportAsync(createWoolworthsSessionSql))
+            using (var connection = NpgsqlDataSource.Create(ConnectionString!))
             {
-                foreach (var row in args)
+                using (var command = connection.CreateCommand(CreateWoolworthsSessionsSql))
                 {
-                    await writer.StartRowAsync();
-                    await writer.WriteAsync(row.StoreId);
-                    await writer.WriteAsync(row.Cookies);
-                    await writer.WriteAsync(row.ExpiresUtc);
+                    command.Parameters.AddWithValue("@store_ids", args.StoreIds);
+                    command.Parameters.AddWithValue("@cookies", args.Cookies);
+                    command.Parameters.AddWithValue("@expires", args.Expires);
+                    using (var reader = await command.ExecuteReaderAsync())
+                    {
+                        var result = new List<CreateWoolworthsSessionsRow>();
+                        while (await reader.ReadAsync())
+                            result.Add(new CreateWoolworthsSessionsRow { WoolworthsSession = new WoolworthsSession { StoreId = reader.GetString(0), Cookies = reader.GetString(1), ExpiresUtc = reader.GetDateTime(2) } });
+                        return result;
+                    }
                 }
-
-                await writer.CompleteAsync();
             }
+        }
 
-            await connection.CloseAsync();
+        if (this.Transaction?.Connection == null || this.Transaction?.Connection.State != System.Data.ConnectionState.Open)
+            throw new InvalidOperationException("Transaction is provided, but its connection is null.");
+        using (var command = this.Transaction.Connection.CreateCommand())
+        {
+            command.CommandText = CreateWoolworthsSessionsSql;
+            command.Transaction = this.Transaction;
+            command.Parameters.AddWithValue("@store_ids", args.StoreIds);
+            command.Parameters.AddWithValue("@cookies", args.Cookies);
+            command.Parameters.AddWithValue("@expires", args.Expires);
+            using (var reader = await command.ExecuteReaderAsync())
+            {
+                var result = new List<CreateWoolworthsSessionsRow>();
+                while (await reader.ReadAsync())
+                    result.Add(new CreateWoolworthsSessionsRow { WoolworthsSession = new WoolworthsSession { StoreId = reader.GetString(0), Cookies = reader.GetString(1), ExpiresUtc = reader.GetDateTime(2) } });
+                return result;
+            }
         }
     }
 
-    private const string getWoolworthsSessionSql = "select woolworths_session.store_id, woolworths_session.cookies, woolworths_session.expires_utc from woolworths_session where store_id = any (@store_ids::varchar(255)[]) and expires_utc > now() order by expires_utc asc";
+    private const string getWoolworthsSessionSql = " select woolworths_session.store_id, woolworths_session.cookies, woolworths_session.expires_utc from woolworths_session where store_id = any (@store_ids::varchar(255)[]) and expires_utc > now() order by expires_utc asc";
     public readonly record struct getWoolworthsSessionRow(WoolworthsSession? WoolworthsSession);
     public readonly record struct getWoolworthsSessionArgs(string[] StoreIds);
     public async Task<List<getWoolworthsSessionRow>> getWoolworthsSession(getWoolworthsSessionArgs args)

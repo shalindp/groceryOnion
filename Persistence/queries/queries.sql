@@ -93,9 +93,17 @@ where username = @username
   and is_deleted = false
 limit 1;
 
--- name: createWoolworthsSession :copyfrom
-insert into woolworths_session (store_id, cookies, expires_utc)
-values (@store_id, @cookies, @expires_utc);
+-- name: CreateWoolworthsSessions :many
+INSERT INTO woolworths_session (store_id, cookies, expires_utc)
+SELECT unnest(@store_ids::varchar(255)[]),
+       unnest(@cookies::text[]),
+       @expires
+RETURNING sqlc.embed(woolworths_session);
+
+
+-- INSERT INTO Conversation_Participant (conversation_id, participant_id)
+--     (SELECT @conversation_id::int, unnest(@participant_id::uuid[])) returning sqlc.embed(Conversation_Participant);
+
 
 -- name: getWoolworthsSession :many
 select sqlc.embed(woolworths_session)

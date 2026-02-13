@@ -1,5 +1,4 @@
 ﻿using Application.Actions.Products;
-using Application.Actions.Regions;
 using Application.Enums;
 using Application.Interfaces;
 using Persistence;
@@ -28,31 +27,34 @@ public class SyncStoreProductsCommand : ICommand<bool, SyncStoreProductsRequest>
     {
         var storesToSync = request.Stores ?? [StoreName.Woolworths, StoreName.NewWorld, StoreName.PaknSave];
 
-        var tasks = new List<Task<QueriesSql.CreateProductsArgs[]>>();
-
-        foreach (var storeName in storesToSync)
+        return await _dbContext.WithTransactionAsync(async (queriesSql) =>
         {
-            switch (storeName)
+            var tasks = new List<Task<QueriesSql.CreateProductsArgs[]>>();
+
+            foreach (var storeName in storesToSync)
             {
-                case StoreName.Woolworths:
+                switch (storeName)
                 {
-                    var woolworthsTask = _woolworthsProductAction.GetStoreProductsAsync(_dbContext);
-                    tasks.Add(woolworthsTask);
-                    break;
-                }
-                case StoreName.PaknSave:
-                {
-                    var paknSaveTask = _paknSaveProductAction.GetStoreProductsAsync(_dbContext);
-                    tasks.Add(paknSaveTask);
-                    break;
+                    case StoreName.Woolworths:
+                    {
+                        var woolworthsTask = _woolworthsProductAction.GetStoreProductsAsync(queriesSql);
+                        tasks.Add(woolworthsTask);
+                        break;
+                    }
+                    case StoreName.PaknSave:
+                    {
+                        var paknSaveTask = _paknSaveProductAction.GetStoreProductsAsync(queriesSql);
+                        tasks.Add(paknSaveTask);
+                        break;
+                    }
                 }
             }
-        }
 
-        var finalProducts = (await Task.WhenAll(tasks)).SelectMany(c => c).ToList();
+            var finalProducts = (await Task.WhenAll(tasks)).SelectMany(c => c).ToList();
 
-        await _dbContext.Queries.CreateProducts(finalProducts);
+            await _dbContext.Queries.CreateProducts(finalProducts);
 
-        return true;
+            return true;
+        });
     }
 }

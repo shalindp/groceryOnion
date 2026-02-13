@@ -1,4 +1,5 @@
 ﻿using Application.Actions.Products;
+using Application.Actions.Session;
 using Application.Enums;
 using Application.Interfaces;
 using Application.Services;
@@ -30,52 +31,64 @@ public class GetProductsPricingQuery : IQuery<ProductPriceQueryRequest[], Produc
     private readonly IWoolworthsThrottleService _woolworthsThrottleService;
     private readonly IPaknSaveProductAction _paknSaveProductAction;
     private readonly ICacheService _cacheService;
-
+    private readonly IPaknSaveSessionAction _paknSaveSessionAction;
+    private readonly IWoolworthsSessionAction _woolworthsSessionAction;
     public GetProductsPricingQuery(INpgsqlDbContext dbContext, IWoolworthsProductAction woolworthsProductAction, IWoolworthsThrottleService woolworthsThrottleService,
-        ICacheService cacheService, IPaknSaveProductAction paknSaveProductAction)
+        ICacheService cacheService, IPaknSaveProductAction paknSaveProductAction, IPaknSaveSessionAction paknSaveSessionAction, IWoolworthsSessionAction woolworthsSessionAction)
     {
         _dbContext = dbContext;
         _woolworthsProductAction = woolworthsProductAction;
         _woolworthsThrottleService = woolworthsThrottleService;
         _cacheService = cacheService;
         _paknSaveProductAction = paknSaveProductAction;
+        _paknSaveSessionAction = paknSaveSessionAction;
+        _woolworthsSessionAction = woolworthsSessionAction;
     }
 
-    
+
     public async Task<ProductPriceQueryRequest[]> SendAsync(ProductPriceQueryRequest[] request)
     {
-        var woolworthsRequests = request.Where(c => c.StoreName == StoreName.Woolworths)
-            .ToArray();
-
-        var woolworthsStoreIds = woolworthsRequests.Select(c => c.StoreId).ToArray();
-        var woolworthsSessions = (await _dbContext.Queries.getWoolworthsSession(new QueriesSql.getWoolworthsSessionArgs(woolworthsStoreIds)))
-            .Select(c => c.WoolworthsSession)
-            .ToList();
-
-        var woolworthTasks = new List<WoolworthsStoreSkuAndSessionActionArg>();
-        foreach (var storePriceHolder in woolworthsRequests)
+        return await _dbContext.WithTransactionAsync<ProductPriceQueryRequest[]>(async (dbContext) =>
         {
-            var session = woolworthsSessions.First(c => c.Value.StoreId.Equals(storePriceHolder.StoreId));
-            woolworthTasks.Add(new WoolworthsStoreSkuAndSessionActionArg(storePriceHolder, session.Value));
-        }
+            #region woolworths
 
-        var paknSaveRequests = request.Where(c => c.StoreName == StoreName.PaknSave)
-            .ToArray();
-        
-        var pakSaveSession = (await _dbContext.Queries.getPaknSaveSession())?.PaknsaveSession;
+            var woolworthsRequests = request.Where(c => c.StoreName == StoreName.Woolworths)
+                .ToArray();
 
-        var paknSaveTasks = new List<Task<ProductPriceQueryRequest>>();
-        foreach (var storePriceHolder in paknSaveRequests)
-        {
-            var task = _paknSaveProductAction.GetProductPricingAsync(storePriceHolder, pakSaveSession.Value.AccessToken);
-            paknSaveTasks.Add(task);
-        }
+            var woolworthsStoreIds = woolworthsRequests.Select(c => c.StoreId).ToArray();
+            var woolworthsSessions = await _woolworthsSessionAction.GetOrCreateSessionAsync(dbContext, woolworthsStoreIds);
 
-        var woolworthsPrices = _woolworthsThrottleService.ExecuteAsync(()=> _woolworthsProductAction.GetProductPricesAsync(woolworthTasks));
-        var paknSavePrices = Task.WhenAll(paknSaveTasks);
+            var woolworthTasks = new List<WoolworthsStoreSkuAndSessionActionArg>();
+            foreach (var storePriceHolder in woolworthsRequests)
+            {
+                var session = woolworthsSessions.First(c => c.Value.StoreId.Equals(storePriceHolder.StoreId));
+                woolworthTasks.Add(new WoolworthsStoreSkuAndSessionActionArg(storePriceHolder, session.Value));
+            }
 
-        var prices = (await Task.WhenAll(woolworthsPrices, paknSavePrices)).SelectMany(c=>c).ToArray();
+            #endregion
 
-        return prices;
+            #region paknsave
+
+            var paknSaveRequests = request.Where(c => c.StoreName == StoreName.PaknSave)
+                .ToArray();
+
+            var pakSaveSession = await _paknSaveSessionAction.GetOrCreateSessionAsync(dbContext);
+
+            var paknSaveTasks = new List<Task<ProductPriceQueryRequest>>();
+            foreach (var storePriceHolder in paknSaveRequests)
+            {
+                var task = _paknSaveProductAction.GetProductPricingAsync(storePriceHolder, pakSaveSession.AccessToken);
+                paknSaveTasks.Add(task);
+            }
+
+            var woolworthsPrices = _woolworthsThrottleService.ExecuteAsync(() => _woolworthsProductAction.GetProductPricesAsync(woolworthTasks));
+            var paknSavePrices = Task.WhenAll(paknSaveTasks);
+
+            #endregion
+
+            var prices = (await Task.WhenAll(woolworthsPrices, paknSavePrices)).SelectMany(c => c).ToArray();
+
+            return prices;
+        });
     }
 }
